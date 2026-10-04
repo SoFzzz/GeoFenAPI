@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { List } from './interfaces/list.interface';
+import { CreateListDto } from './dto/create-list.dto';
+import { UpdateListDto } from './dto/update-list.dto';
 
 /**
  * ListsService: Capa de lógica de negocio para la gestión de listas de compras.
@@ -42,5 +44,38 @@ export class ListsService {
     }
 
     return list;
+  }
+
+  /**
+   * Registra una nueva lista de compras asignando un ID numérico autoincremental.
+   */
+  create(dto: CreateListDto): List {
+    const newList: List = {
+      id: this.currentId++,
+      name: dto.name,
+      items: dto.items,
+    };
+    this.lists.push(newList);
+    return newList;
+  }
+
+  /**
+   * Actualiza una lista existente buscando por su ID.
+   * Versión base: busca el índice y actualiza los campos.
+   */
+  update(id: number, dto: UpdateListDto): List {
+    const list = this.findOne(id);
+    list.name = dto.name;
+    list.items = dto.items;
+    return list;
+  }
+
+  /**
+   * Elimina una lista por su ID.
+   */
+  remove(id: number): { message: string } {
+    const list = this.findOne(id);
+    this.lists = this.lists.filter((item) => item.id !== list.id);
+    return { message: `Lista con ID ${id} eliminada correctamente` };
   }
 }

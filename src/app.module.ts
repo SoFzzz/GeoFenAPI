@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
+import { ListsModule } from './lists/lists.module';
 
 /**
  * AppModule: Módulo raíz de la aplicación GeoFen API.
- * En NestJS, toda aplicación tiene al menos un módulo raíz encargado de
- * estructurar y coordinar los submódulos del sistema.
+ * Importa los submódulos funcionales organizados por dominio.
  */
 @Module({
-  imports: [],
+  imports: [ListsModule],
   controllers: [],
   providers: [],
 })
