@@ -10,6 +10,12 @@ import {
   Post,
   Put,
 } from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ListsService } from './lists.service';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
@@ -18,60 +24,66 @@ import { List } from './interfaces/list.interface';
 /**
  * ListsController: Capa de transporte y enrutamiento HTTP para el recurso '/lists'.
  *
- * @Controller('lists'): Prefijo de ruta base. Por convención RESTful, los recursos
- * se nombran en plural y nunca contienen verbos en la URL.
- *
- * Principio de Responsabilidad Única (SRP):
- * Este controlador ÚNICAMENTE recibe peticiones, aplica pipes de transformación/validación
- * y delega la ejecución al servicio. No contiene lógica de negocio ni persistencia.
+ * @ApiTags('lists'): Agrupa estos endpoints bajo la sección 'lists' en la documentación interactiva Swagger.
+ * @Controller('lists'): Prefijo base en plural siguiendo buenas prácticas RESTful.
  */
+@ApiTags('lists')
 @Controller('lists')
 export class ListsController {
   /**
    * Inyección de Dependencias (DI):
-   * Al declarar 'private readonly listsService: ListsService' en los parámetros del constructor,
-   * el contenedor de inversión de control (IoC) de NestJS resuelve e inyecta la instancia Singleton.
+   * NestJS resuelve la instancia Singleton de ListsService en tiempo de inicio.
    */
   constructor(private readonly listsService: ListsService) {}
 
   /**
    * GET /lists
-   * Retorna el listado completo de listas registradas.
-   * Código HTTP por defecto: 200 OK.
+   * Retorna todas las listas de compras.
    */
   @Get()
+  @ApiOperation({ summary: 'Obtener todas las listas de compras registradas' })
+  @ApiResponse({ status: 200, description: 'Listado recuperado exitosamente.' })
   findAll(): List[] {
     return this.listsService.findAll();
   }
 
   /**
    * GET /lists/:id
-   * Obtiene el detalle de una lista específica.
-   * ParseIntPipe: Transforma el parámetro de ruta 'id' (string) a número entero (number)
-   * antes de pasarlo al método. Si el cliente envía 'abc', responde automáticamente con 400 Bad Request.
+   * Busca una lista por su identificador numérico.
    */
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener una lista específica por su ID' })
+  @ApiParam({ name: 'id', description: 'ID numérico de la lista', example: 1 })
+  @ApiResponse({ status: 200, description: 'Lista encontrada.' })
+  @ApiResponse({ status: 400, description: 'ID no numérico (error de ParseIntPipe).' })
+  @ApiResponse({ status: 404, description: 'Lista no encontrada en el sistema.' })
   findOne(@Param('id', ParseIntPipe) id: number): List {
     return this.listsService.findOne(id);
   }
 
   /**
    * POST /lists
-   * Crea una nueva lista de compras a partir de los datos validados del Body.
-   * @HttpCode(HttpStatus.CREATED): Establece explícitamente el código HTTP 201 Created.
+   * Crea una nueva lista validando el cuerpo con CreateListDto.
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Crear una nueva lista de compras' })
+  @ApiResponse({ status: 201, description: 'Lista creada exitosamente.' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos en el cuerpo (class-validator).' })
   create(@Body() createListDto: CreateListDto): List {
     return this.listsService.create(createListDto);
   }
 
   /**
    * PUT /lists/:id
-   * Reemplazo completo de una lista existente.
-   * Código HTTP por defecto: 200 OK.
+   * Reemplazo total de una lista existente.
    */
   @Put(':id')
+  @ApiOperation({ summary: 'Actualizar completamente una lista existente' })
+  @ApiParam({ name: 'id', description: 'ID numérico de la lista a actualizar', example: 1 })
+  @ApiResponse({ status: 200, description: 'Lista actualizada exitosamente.' })
+  @ApiResponse({ status: 400, description: 'Datos o ID inválidos.' })
+  @ApiResponse({ status: 404, description: 'Lista no encontrada para actualizar.' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateListDto: UpdateListDto,
@@ -81,10 +93,13 @@ export class ListsController {
 
   /**
    * DELETE /lists/:id
-   * Elimina una lista por su identificador único.
-   * Código HTTP por defecto: 200 OK.
+   * Elimina una lista de compras.
    */
   @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar una lista de compras por su ID' })
+  @ApiParam({ name: 'id', description: 'ID numérico de la lista a eliminar', example: 1 })
+  @ApiResponse({ status: 200, description: 'Lista eliminada exitosamente.' })
+  @ApiResponse({ status: 404, description: 'Lista no encontrada para eliminar.' })
   remove(@Param('id', ParseIntPipe) id: number): { message: string } {
     return this.listsService.remove(id);
   }

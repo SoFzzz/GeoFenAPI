@@ -4,37 +4,45 @@ import {
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { StoresService } from './stores.service';
 import { Store } from './interfaces/store.interface';
 
 /**
  * StoresController: Controlador HTTP para el recurso '/stores'.
- * Expone únicamente operaciones de lectura (GET) siguiendo el patrón de diseño MVP.
+ * Expone operaciones de lectura para consultar establecimientos comerciales.
  */
+@ApiTags('stores')
 @Controller('stores')
 export class StoresController {
-  /**
-   * Inyección del servicio StoresService mediante el constructor.
-   * NestJS proporciona la instancia singleton automáticamente.
-   */
   constructor(private readonly storesService: StoresService) {}
 
   /**
    * GET /stores
-   * Retorna la lista de tiendas comerciales disponibles.
-   * Código HTTP: 200 OK.
+   * Retorna todas las tiendas precargadas en el sistema.
    */
   @Get()
+  @ApiOperation({ summary: 'Obtener el catálogo de tiendas comerciales' })
+  @ApiResponse({ status: 200, description: 'Catálogo de tiendas obtenido exitosamente.' })
   findAll(): Store[] {
     return this.storesService.findAll();
   }
 
   /**
    * GET /stores/:id
-   * Obtiene la información de una tienda por su identificador.
-   * Utiliza ParseIntPipe para validar y transformar el parámetro 'id'.
+   * Retorna el detalle de una tienda por su identificador.
    */
   @Get(':id')
+  @ApiOperation({ summary: 'Obtener información de una tienda específica por ID' })
+  @ApiParam({ name: 'id', description: 'ID numérico de la tienda', example: 1 })
+  @ApiResponse({ status: 200, description: 'Tienda encontrada.' })
+  @ApiResponse({ status: 400, description: 'ID no numérico.' })
+  @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
   findOne(@Param('id', ParseIntPipe) id: number): Store {
     return this.storesService.findOne(id);
   }
