@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
+import { StoresController } from './stores.controller';
 import { StoresService } from './stores.service';
 
 /**
- * StoresModule: Módulo funcional para el dominio de Tiendas comerciales.
- * Registra el proveedor StoresService para inyección de dependencias.
+ * StoresModule: Módulo funcional para la gestión y consulta de tiendas comerciales.
+ * Agrupa StoresController (capa HTTP) y StoresService (lógica y datos).
  */
 @Module({
-  controllers: [],
+  controllers: [StoresController],
   providers: [StoresService],
   exports: [StoresService],
 })
