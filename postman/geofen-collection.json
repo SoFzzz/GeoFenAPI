@@ -1,0 +1,223 @@
+{
+  "info": {
+    "_postman_id": "b3e02914-f58c-4ad2-9be7-e54fa91c1012",
+    "name": "GeoFen API REST - Pruebas y Ejemplos",
+    "description": "Colección de pruebas para GeoFen API. Incluye casos de éxito (200, 201) y casos de validación y error (400, 404).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Listas (Lists CRUD)",
+      "item": [
+        {
+          "name": "1. GET - Obtener todas las listas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/lists",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["lists"]
+            },
+            "description": "Retorna el arreglo completo de listas en memoria (HTTP 200)."
+          },
+          "response": []
+        },
+        {
+          "name": "2. GET - Obtener lista por ID (Éxito)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/lists/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["lists", "1"]
+            },
+            "description": "Retorna la lista con ID 1 (HTTP 200)."
+          },
+          "response": []
+        },
+        {
+          "name": "3. GET - Error 404 Lista no encontrada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/lists/999",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["lists", "999"]
+            },
+            "description": "Prueba de Early Return lanzando NotFoundException (HTTP 404)."
+          },
+          "response": []
+        },
+        {
+          "name": "4. GET - Error 400 ID inválido (ParseIntPipe)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/lists/no-es-un-numero",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["lists", "no-es-un-numero"]
+            },
+            "description": "Demuestra la intercepción del ParseIntPipe de NestJS ante parámetros no numéricos (HTTP 400)."
+          },
+          "response": []
+        },
+        {
+          "name": "5. POST - Crear lista (Éxito)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Compras Asado de Domingo\",\n  \"items\": [\n    \"Carne de res para asar\",\n    \"Carbón vegetal\",\n    \"Guacamole\",\n    \"Arepas de maíz\",\n    \"Bebidas gaseosas\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/lists",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["lists"]
+            },
+            "description": "Crea una nueva lista con CreateListDto válido y responde HTTP 201 Created."
+          },
+          "response": []
+        },
+        {
+          "name": "6. POST - Error 400 Validación DTO (class-validator)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"items\": \"no-es-un-arreglo\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/lists",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["lists"]
+            },
+            "description": "Demuestra el rechazo automático por ValidationPipe con mensajes explicativos de @IsNotEmpty y @IsArray."
+          },
+          "response": []
+        },
+        {
+          "name": "7. PUT - Actualizar lista existente (Éxito)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Compras Semanales Actualizadas\",\n  \"items\": [\n    \"Leche deslactosada\",\n    \"Huevos campesinos AAA\",\n    \"Pan integral\",\n    \"Café especial molido\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/lists/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["lists", "1"]
+            },
+            "description": "Reemplazo completo usando spread operator en el Service (HTTP 200)."
+          },
+          "response": []
+        },
+        {
+          "name": "8. DELETE - Eliminar lista por ID (Éxito)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/lists/2",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["lists", "2"]
+            },
+            "description": "Elimina la lista con ID 2 de la memoria (HTTP 200)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tiendas (Stores Read-Only)",
+      "item": [
+        {
+          "name": "1. GET - Obtener todas las tiendas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/stores",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores"]
+            },
+            "description": "Retorna las 3 tiendas precargadas de Pasto (HTTP 200)."
+          },
+          "response": []
+        },
+        {
+          "name": "2. GET - Obtener tienda por ID (Éxito)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/stores/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "1"]
+            },
+            "description": "Retorna Éxito Panamericana (HTTP 200)."
+          },
+          "response": []
+        },
+        {
+          "name": "3. GET - Error 404 Tienda no encontrada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/stores/888",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "888"]
+            },
+            "description": "Lanza NotFoundException temprana si la tienda no existe (HTTP 404)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
