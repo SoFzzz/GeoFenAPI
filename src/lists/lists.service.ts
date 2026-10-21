@@ -1,39 +1,73 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { List } from './interfaces/list.interface';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { List } from './entities/list.entity';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
 
 /**
- * ListsService: Lógica de negocio y persistencia en memoria para Listas.
+ * ListsService: Lógica de negocio y persistencia de Listas mediante TypeORM.
  *
  * @Injectable(): Registra el servicio en el contenedor IoC.
  * NestJS instancia esta clase una sola vez (Patrón Singleton) y la inyecta
- * donde sea requerida, garantizando que el arreglo 'lists' conserve su estado.
+ * donde sea requerida.
+ *
+ * OnModuleInit: Interfaz del ciclo de vida de NestJS. Su método onModuleInit()
+ * se ejecuta una vez que el módulo ya fue construido y sus dependencias están
+ * listas, justo antes de que la aplicación empiece a atender peticiones.
  */
 @Injectable()
-export class ListsService {
-  // Arreglo en memoria: Almacenamiento temporal de listas de compras
-  private lists: List[] = [
-    {
-      id: 1,
-      name: 'Compras semanales del hogar',
-      items: ['Leche', 'Huevos', 'Pan artesanal', 'Café de Nariño'],
-    },
-    {
-      id: 2,
-      name: 'Artículos de despensa',
-      items: ['Arroz', 'Aceite vegetal', 'Sal marina', 'Lentejas'],
-    },
-  ];
-
-  // Generador de identificadores autoincrementables
-  private currentId = 3;
+export class ListsService implements OnModuleInit {
+  /**
+   * PATRÓN REPOSITORY:
+   * Repository<List> es un objeto que encapsula todas las operaciones sobre la
+   * tabla 'lists' (buscar, guardar, eliminar). El servicio no escribe SQL; le pide
+   * al repositorio que lo haga y trabaja con objetos List.
+   *
+   * @InjectRepository(List): Decorador de @nestjs/typeorm que le indica al contenedor
+   * de NestJS que inyecte el repositorio asociado a la entidad List (registrado
+   * previamente en ListsModule con TypeOrmModule.forFeature).
+   */
+  constructor(
+    @InjectRepository(List)
+    private readonly listsRepository: Repository<List>,
+  ) {}
 
   /**
-   * Obtiene la colección completa de listas.
+   * SEMILLA DE DATOS (Seed):
+   * Al iniciar la aplicación se insertan las dos listas originales, pero solo
+   * si la tabla está vacía. Así, reiniciar el servidor no duplica registros.
    */
-  findAll(): List[] {
-    return this.lists;
+  async onModuleInit(): Promise<void> {
+    const total = await this.listsRepository.count();
+
+    if (total > 0) {
+      return;
+    }
+
+    await this.listsRepository.save([
+      {
+        name: 'Compras semanales del hogar',
+        items: ['Leche', 'Huevos', 'Pan artesanal', 'Café de Nariño'],
+      },
+      {
+        name: 'Artículos de despensa',
+        items: ['Arroz', 'Aceite vegetal', 'Sal marina', 'Lentejas'],
+      },
+    ]);
+  }
+
+  /**
+   * Obtiene la colección completa de listas ordenadas por ID ascendente.
+   *
+   * ASYNC / AWAIT:
+   * Consultar la base de datos es una operación de E/S (red) que tarda un tiempo
+   * indeterminado. 'async' permite que el método devuelva una Promesa, y 'await'
+   * pausa esta función hasta que llegan los datos, sin bloquear el hilo principal
+   * de Node.js mientras tanto.
+   */
+  async findAll(): Promise<List[]> {
+    return this.listsRepository.find({ order: { id: 'ASC' } });
   }
 
   /**
@@ -45,8 +79,8 @@ export class ListsService {
    * la ejecución lanzando la excepción de inmediato. Esto mantiene el código
    * lineal, legible y libre de indentación innecesaria.
    */
-  findOne(id: number): List {
-    const list = this.lists.find((item) => item.id === id);
+  async findOne(id: number): Promise<List> {
+    const list = await this.listsRepository.findOneBy({ id });
 
     if (!list) {
       throw new NotFoundException(`Lista con ID ${id} no encontrada`);
@@ -56,54 +90,41 @@ export class ListsService {
   }
 
   /**
-   * Agrega una nueva lista al arreglo en memoria.
+   * Crea y guarda una nueva lista en la base de datos.
+   *
+   * create() construye una instancia de List en memoria a partir del DTO (sin tocar
+   * la BD). save() la inserta y devuelve la entidad con el ID que asignó PostgreSQL.
    */
-  create(dto: CreateListDto): List {
-    const newList: List = {
-      id: this.currentId++,
-      name: dto.name,
-      items: dto.items,
-    };
-
-    this.lists.push(newList);
-    return newList;
+  async create(dto: CreateListDto): Promise<List> {
+    const newList = this.listsRepository.create(dto);
+    return this.listsRepository.save(newList);
   }
 
   /**
    * Actualiza los datos de una lista existente mediante reemplazo total.
    *
-   * Se utiliza el operador Spread (...existente, ...dto) para fusionar
-   * las propiedades conservando el identificador inmutable.
+   * Primero se busca la lista (si no existe, se lanza 404). Luego merge() copia
+   * sobre la entidad encontrada las propiedades del DTO, conservando el ID
+   * inmutable, y save() persiste los cambios.
    */
-  update(id: number, dto: UpdateListDto): List {
-    const index = this.lists.findIndex((item) => item.id === id);
+  async update(id: number, dto: UpdateListDto): Promise<List> {
+    const list = await this.findOne(id);
 
-    if (index === -1) {
-      throw new NotFoundException(`Lista con ID ${id} no encontrada`);
-    }
-
-    // Reemplazo conservando el ID con spread operator
-    const updatedList: List = {
-      ...this.lists[index],
-      name: dto.name,
-      items: dto.items,
-    };
-
-    this.lists[index] = updatedList;
-    return updatedList;
+    const updatedList = this.listsRepository.merge(list, dto);
+    return this.listsRepository.save(updatedList);
   }
 
   /**
-   * Elimina una lista del almacenamiento en memoria.
+   * Elimina una lista de la base de datos.
+   *
+   * Se verifica primero la existencia con findOne() para responder 404 de forma
+   * explícita. Como remove() limpia el ID de la entidad tras borrarla, guardamos
+   * el 'id' original antes para construir el mensaje de respuesta.
    */
-  remove(id: number): { message: string } {
-    const index = this.lists.findIndex((item) => item.id === id);
+  async remove(id: number): Promise<{ message: string }> {
+    const list = await this.findOne(id);
 
-    if (index === -1) {
-      throw new NotFoundException(`Lista con ID ${id} no encontrada`);
-    }
-
-    this.lists.splice(index, 1);
+    await this.listsRepository.remove(list);
     return { message: `Lista con ID ${id} eliminada exitosamente` };
   }
 }

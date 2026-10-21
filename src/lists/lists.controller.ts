@@ -19,7 +19,7 @@ import {
 import { ListsService } from './lists.service';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
-import { List } from './interfaces/list.interface';
+import { List } from './entities/list.entity';
 
 /**
  * ListsController: Capa de transporte y enrutamiento HTTP para el recurso '/lists'.
@@ -39,11 +39,14 @@ export class ListsController {
   /**
    * GET /lists
    * Retorna todas las listas de compras.
+   *
+   * Los handlers son async: NestJS espera la Promesa que devuelve el servicio
+   * y envía al cliente el valor resuelto (el JSON), no la Promesa en sí.
    */
   @Get()
   @ApiOperation({ summary: 'Obtener todas las listas de compras registradas' })
   @ApiResponse({ status: 200, description: 'Listado recuperado exitosamente.' })
-  findAll(): List[] {
+  async findAll(): Promise<List[]> {
     return this.listsService.findAll();
   }
 
@@ -57,7 +60,7 @@ export class ListsController {
   @ApiResponse({ status: 200, description: 'Lista encontrada.' })
   @ApiResponse({ status: 400, description: 'ID no numérico (error de ParseIntPipe).' })
   @ApiResponse({ status: 404, description: 'Lista no encontrada en el sistema.' })
-  findOne(@Param('id', ParseIntPipe) id: number): List {
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<List> {
     return this.listsService.findOne(id);
   }
 
@@ -70,7 +73,7 @@ export class ListsController {
   @ApiOperation({ summary: 'Crear una nueva lista de compras' })
   @ApiResponse({ status: 201, description: 'Lista creada exitosamente.' })
   @ApiResponse({ status: 400, description: 'Datos inválidos en el cuerpo (class-validator).' })
-  create(@Body() createListDto: CreateListDto): List {
+  async create(@Body() createListDto: CreateListDto): Promise<List> {
     return this.listsService.create(createListDto);
   }
 
@@ -84,10 +87,10 @@ export class ListsController {
   @ApiResponse({ status: 200, description: 'Lista actualizada exitosamente.' })
   @ApiResponse({ status: 400, description: 'Datos o ID inválidos.' })
   @ApiResponse({ status: 404, description: 'Lista no encontrada para actualizar.' })
-  update(
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateListDto: UpdateListDto,
-  ): List {
+  ): Promise<List> {
     return this.listsService.update(id, updateListDto);
   }
 
@@ -100,7 +103,7 @@ export class ListsController {
   @ApiParam({ name: 'id', description: 'ID numérico de la lista a eliminar', example: 1 })
   @ApiResponse({ status: 200, description: 'Lista eliminada exitosamente.' })
   @ApiResponse({ status: 404, description: 'Lista no encontrada para eliminar.' })
-  remove(@Param('id', ParseIntPipe) id: number): { message: string } {
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
     return this.listsService.remove(id);
   }
 }
