@@ -16,7 +16,7 @@ El proyecto se encuentra en su fase base arquitectónica (MVP didáctico), compl
 
 2. **Módulo Stores (`/stores`):**
    - Implementa un flujo de solo lectura (`GET /stores` y `GET /stores/:id`).
-   - Cuenta con 3 tiendas precargadas de la ciudad de Pasto (Éxito Panamericana, Alkosto Centro y Supermercado Amorel).
+   - Lee las tiendas desde PostgreSQL (TypeORM). Si la tabla está vacía al iniciar, inserta 3 tiendas de ejemplo de la ciudad de Pasto (Éxito Panamericana, Alkosto Centro y Supermercado Amorel). Requiere la base de datos levantada con `docker compose up -d` (ver el README principal).
    - No tiene operaciones de mutación (POST/PUT/DELETE) en esta etapa, manteniendo el principio de mínima superficie de ataque y menor complejidad (KISS).
 
 3. **Documentación Swagger interactiva:**

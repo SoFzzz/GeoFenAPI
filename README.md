@@ -9,7 +9,7 @@ API RESTful construida con **NestJS** y **TypeScript** para la gestión de lista
 **GeoFen** es una plataforma orientada a la optimización de compras cotidianas. Permite a los usuarios crear sus listas de compras y, con base en su ubicación geográfica, descubrir tiendas cercanas y comparar precios de productos.
 
 > **Alcance de esta entrega:**  
-> Implementación del **núcleo backend base (MVP)**: una API RESTful sin dependencias de bases de datos pesadas ni interfaces gráficas, persistida temporalmente en memoria y documentada con **Swagger** y colecciones de **Postman**.
+> Implementación del **núcleo backend base (MVP)**: una API RESTful sin interfaces gráficas. Las listas se guardan temporalmente en memoria, las tiendas se almacenan en **PostgreSQL** (con Docker y **TypeORM**), y la API se documenta con **Swagger** y colecciones de **Postman**.
 
 ---
 
@@ -48,9 +48,9 @@ La aplicación sigue el patrón estándar de NestJS con separación estricta de 
                        │
                        ▼  Lectura / Escritura
 ┌────────────────────────────────────────────────────────┐
-│  Almacenamiento Temporal (Arreglo en Memoria)          │
-│  - lists: List[]                                       │
-│  - stores: Store[]                                     │
+│  Almacenamiento                                        │
+│  - lists: List[] (arreglo en memoria)                  │
+│  - stores: Repository<Store> -> PostgreSQL (TypeORM)   │
 └──────────────────────┬─────────────────────────────────┘
                        │
                        ▼  HTTP Response (200, 201, 400, 404)
@@ -79,13 +79,15 @@ geofen-api/
 │   │   ├── lists.module.ts         # Encapsulamiento del módulo
 │   │   └── lists.service.ts        # Lógica de negocio y persistencia en memoria
 │   ├── stores/                     # Módulo de Tiendas (Solo lectura)
-│   │   ├── interfaces/
-│   │   │   └── store.interface.ts  # Contrato de datos de la tienda
+│   │   ├── entities/
+│   │   │   └── store.entity.ts     # Entidad TypeORM (tabla stores)
 │   │   ├── stores.controller.ts    # Enrutamiento HTTP
 │   │   ├── stores.module.ts        # Encapsulamiento del módulo
-│   │   └── stores.service.ts       # Datos precargados de Pasto
+│   │   └── stores.service.ts       # Consultas con TypeORM y seed de tiendas de Pasto
 │   ├── app.module.ts               # Módulo raíz que conecta Listas y Tiendas
 │   └── main.ts                     # Bootstrap, ValidationPipe y Swagger en /api
+├── .env.example                    # Variables de entorno de ejemplo (puerto y BD)
+├── docker-compose.yml              # Servicios PostgreSQL y pgAdmin
 ├── package.json                    # Dependencias y scripts
 ├── tsconfig.json                   # Configuración del compilador TypeScript
 └── README.md                       # Documentación principal
@@ -131,6 +133,47 @@ npm install @nestjs/swagger
 
 ---
 
+## 🐘 Base de datos (Docker + PostgreSQL)
+
+Las tiendas se leen desde **PostgreSQL**, que corre en un contenedor de Docker junto con **pgAdmin** para administrarla visualmente.
+
+### Prerrequisitos
+- **Docker Desktop** instalado y en ejecución.
+- Node.js y npm.
+
+### Puesta en marcha
+```bash
+# 1. Crear el archivo de variables de entorno a partir del ejemplo
+cp .env.example .env
+
+# 2. Levantar PostgreSQL y pgAdmin en segundo plano
+docker compose up -d
+
+# 3. Instalar dependencias de la API
+npm install
+
+# 4. Iniciar la API en modo desarrollo
+npm run start:dev
+```
+
+- **Puerto:** PostgreSQL se publica en el host por el puerto `5433` (variable `DB_PORT`) para no chocar con un PostgreSQL local que use el 5432.
+- **Datos de ejemplo:** al iniciar, si la tabla `stores` está vacía, la API inserta las 3 tiendas de Pasto automáticamente.
+
+### Acceso con pgAdmin
+1. Abre **http://localhost:5050** e inicia sesión con `admin@geofen.com` / `admin_password`.
+2. Registra un servidor nuevo (**Add New Server**) con estos datos:
+   - **Host name/address:** `postgres` (nombre del servicio dentro de la red de Docker, no `localhost`).
+   - **Port:** `5432` (puerto interno del contenedor).
+   - **Database:** `geofen_db` · **Username:** `geofen_user` · **Password:** `geofen_password`.
+
+### Detener los servicios
+```bash
+docker compose down      # Detiene los contenedores y conserva los datos
+docker compose down -v   # Detiene los contenedores y ELIMINA los datos (volúmenes)
+```
+
+---
+
 ## 📡 5. Tabla de Endpoints de la API
 
 Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando las convenciones RESTful:
@@ -156,7 +199,7 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 3. **Servicio (`@Injectable`):**  
    Aloja la lógica de negocio y las operaciones sobre los datos. Nunca sabe de HTTP ni de peticiones web directas; solo procesa datos y retorna resultados o lanza excepciones.
 4. **Inyección de Dependencias (DI) & Singleton:**  
-   NestJS instancia los servicios una sola vez al arrancar y los inyecta en el constructor de los controladores. Esto evita crear múltiples instancias (`new ListsService()`) y asegura que el arreglo en memoria se mantenga consistente.
+   NestJS instancia los servicios una sola vez al arrancar y los inyecta en el constructor de los controladores. Esto evita crear múltiples instancias (`new ListsService()`) y asegura que el estado compartido (el arreglo en memoria de listas) se mantenga consistente.
 5. **DTO y `class-validator`:**  
    Define el contrato estricto de entrada. Si un cliente envía campos no válidos o tipos incorrectos, el `ValidationPipe` rechaza la petición con `400 Bad Request` antes de que toque la lógica del servicio.
 6. **Retorno Temprano (Early Return):**  
