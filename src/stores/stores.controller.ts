@@ -11,7 +11,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { StoresService } from './stores.service';
-import { Store } from './interfaces/store.interface';
+import { Store } from './entities/store.entity';
 
 /**
  * StoresController: Controlador HTTP para el recurso '/stores'.
@@ -29,7 +29,7 @@ export class StoresController {
   @Get()
   @ApiOperation({ summary: 'Obtener el catálogo de tiendas comerciales' })
   @ApiResponse({ status: 200, description: 'Catálogo de tiendas obtenido exitosamente.' })
-  findAll(): Store[] {
+  findAll(): Promise<Store[]> {
     return this.storesService.findAll();
   }
 
@@ -43,7 +43,7 @@ export class StoresController {
   @ApiResponse({ status: 200, description: 'Tienda encontrada.' })
   @ApiResponse({ status: 400, description: 'ID no numérico.' })
   @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
-  findOne(@Param('id', ParseIntPipe) id: number): Store {
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<Store> {
     return this.storesService.findOne(id);
   }
 }
