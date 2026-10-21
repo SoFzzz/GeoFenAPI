@@ -9,7 +9,7 @@ API RESTful construida con **NestJS** y **TypeScript** para la gestión de lista
 **GeoFen** es una plataforma orientada a la optimización de compras cotidianas. Permite a los usuarios crear sus listas de compras y, con base en su ubicación geográfica, descubrir tiendas cercanas y comparar precios de productos.
 
 > **Alcance de esta entrega:**  
-> Implementación del **núcleo backend base (MVP)**: una API RESTful sin interfaces gráficas. Las listas se guardan temporalmente en memoria, las tiendas se almacenan en **PostgreSQL** (con Docker y **TypeORM**), y la API se documenta con **Swagger** y colecciones de **Postman**.
+> Implementación del **núcleo backend base (MVP)**: una API RESTful sin interfaces gráficas. Las listas y las tiendas se almacenan en **PostgreSQL** (con Docker y **TypeORM**), y la API se documenta con **Swagger** y colecciones de **Postman**.
 
 ---
 
@@ -49,7 +49,7 @@ La aplicación sigue el patrón estándar de NestJS con separación estricta de 
                        ▼  Lectura / Escritura
 ┌────────────────────────────────────────────────────────┐
 │  Almacenamiento                                        │
-│  - lists: List[] (arreglo en memoria)                  │
+│  - lists: Repository<List> -> PostgreSQL (TypeORM)     │
 │  - stores: Repository<Store> -> PostgreSQL (TypeORM)   │
 └──────────────────────┬─────────────────────────────────┘
                        │
@@ -73,11 +73,11 @@ geofen-api/
 │   │   ├── dto/
 │   │   │   ├── create-list.dto.ts  # Validaciones para creación
 │   │   │   └── update-list.dto.ts  # Validaciones para actualización
-│   │   ├── interfaces/
-│   │   │   └── list.interface.ts   # Contrato de datos de la lista
+│   │   ├── entities/
+│   │   │   └── list.entity.ts      # Entidad TypeORM (tabla lists)
 │   │   ├── lists.controller.ts     # Enrutamiento HTTP
 │   │   ├── lists.module.ts         # Encapsulamiento del módulo
-│   │   └── lists.service.ts        # Lógica de negocio y persistencia en memoria
+│   │   └── lists.service.ts        # Lógica de negocio con Repository y seed inicial
 │   ├── stores/                     # Módulo de Tiendas (Solo lectura)
 │   │   ├── entities/
 │   │   │   └── store.entity.ts     # Entidad TypeORM (tabla stores)
@@ -199,7 +199,7 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 3. **Servicio (`@Injectable`):**  
    Aloja la lógica de negocio y las operaciones sobre los datos. Nunca sabe de HTTP ni de peticiones web directas; solo procesa datos y retorna resultados o lanza excepciones.
 4. **Inyección de Dependencias (DI) & Singleton:**  
-   NestJS instancia los servicios una sola vez al arrancar y los inyecta en el constructor de los controladores. Esto evita crear múltiples instancias (`new ListsService()`) y asegura que el estado compartido (el arreglo en memoria de listas) se mantenga consistente.
+   NestJS instancia los servicios una sola vez al arrancar y los inyecta en el constructor de los controladores. Esto evita crear múltiples instancias (`new ListsService()`) y asegura que todos usen el mismo `Repository` conectado a PostgreSQL.
 5. **DTO y `class-validator`:**  
    Define el contrato estricto de entrada. Si un cliente envía campos no válidos o tipos incorrectos, el `ValidationPipe` rechaza la petición con `400 Bad Request` antes de que toque la lógica del servicio.
 6. **Retorno Temprano (Early Return):**  

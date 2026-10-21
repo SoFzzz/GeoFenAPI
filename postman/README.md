@@ -9,7 +9,7 @@ Este directorio contiene los ejemplos de peticiones y la colección exportable d
 El proyecto se encuentra en su fase base arquitectónica (MVP didáctico), completamente funcional bajo el patrón de **Inyección de Dependencias** de NestJS:
 
 1. **Módulo Lists (`/lists`):**
-   - Implementa un CRUD completo en memoria.
+   - Implementa un CRUD completo persistido en PostgreSQL.
    - Las peticiones de creación (`POST`) y actualización (`PUT`) pasan por el `ValidationPipe` global, que valida que el nombre no sea vacío (`@IsNotEmpty`) y que los items sean un arreglo de strings (`@IsArray`, `@IsString({ each: true })`).
    - Las búsquedas (`GET /lists/:id`), actualizaciones (`PUT /lists/:id`) y eliminaciones (`DELETE /lists/:id`) utilizan la técnica de **Retorno Temprano (Early Return)**. Si el registro no se encuentra, detienen la ejecución lanzando `NotFoundException` (HTTP 404) de forma inmediata.
    - En la actualización (`PUT`), se aplica el operador spread (`{ ...this.lists[index], ...dto }`) para mantener inmutable el ID autoincrementable y actualizar únicamente los atributos enviados.
