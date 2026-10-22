@@ -106,9 +106,21 @@ npm install class-validator class-transformer
 
 # Documentación interactiva OpenAPI / Swagger
 npm install @nestjs/swagger
+
+# Conexión a PostgreSQL con TypeORM y variables de entorno
+npm install @nestjs/typeorm typeorm pg @nestjs/config
 ```
 
 ### Ejecución en Entorno Local
+
+0. **Levantar la base de datos con Docker (requiere Docker Desktop):**
+   ```bash
+   cp .env.example .env
+   docker compose up -d
+   ```
+   - PostgreSQL queda en `localhost:5433` (puerto configurable con `DB_PORT` en `.env`).
+   - pgAdmin queda en `http://localhost:5050` (`admin@geofen.com` / `admin_password`). Para registrar el servidor usar host `postgres`, puerto `5432`, usuario `geofen_user`, contraseña `geofen_password`.
+   - `docker compose down` detiene los contenedores; `docker compose down -v` además borra los datos.
 
 1. **Instalar dependencias:**
    ```bash
