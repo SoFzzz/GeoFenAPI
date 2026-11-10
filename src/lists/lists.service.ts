@@ -1,39 +1,29 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { List } from './interfaces/list.interface';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { List } from './entities/list.entity';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
 
 /**
- * ListsService: Lógica de negocio y persistencia en memoria para Listas.
+ * ListsService: Lógica de negocio y persistencia en PostgreSQL para Listas.
  *
  * @Injectable(): Registra el servicio en el contenedor IoC.
- * NestJS instancia esta clase una sola vez (Patrón Singleton) y la inyecta
- * donde sea requerida, garantizando que el arreglo 'lists' conserve su estado.
+ * NestJS instancia esta clase una sola vez (Patrón Singleton) y le inyecta
+ * el repositorio de TypeORM de la entidad List.
  */
 @Injectable()
 export class ListsService {
-  // Arreglo en memoria: Almacenamiento temporal de listas de compras
-  private lists: List[] = [
-    {
-      id: 1,
-      name: 'Compras semanales del hogar',
-      items: ['Leche', 'Huevos', 'Pan artesanal', 'Café de Nariño'],
-    },
-    {
-      id: 2,
-      name: 'Artículos de despensa',
-      items: ['Arroz', 'Aceite vegetal', 'Sal marina', 'Lentejas'],
-    },
-  ];
-
-  // Generador de identificadores autoincrementables
-  private currentId = 3;
+  constructor(
+    @InjectRepository(List)
+    private readonly listRepository: Repository<List>,
+  ) {}
 
   /**
-   * Obtiene la colección completa de listas.
+   * Obtiene la colección completa de listas ordenadas por id.
    */
-  findAll(): List[] {
-    return this.lists;
+  async findAll(): Promise<List[]> {
+    return this.listRepository.find({ order: { id: 'ASC' } });
   }
 
   /**
@@ -45,8 +35,8 @@ export class ListsService {
    * la ejecución lanzando la excepción de inmediato. Esto mantiene el código
    * lineal, legible y libre de indentación innecesaria.
    */
-  findOne(id: number): List {
-    const list = this.lists.find((item) => item.id === id);
+  async findOne(id: number): Promise<List> {
+    const list = await this.listRepository.findOneBy({ id });
 
     if (!list) {
       throw new NotFoundException(`Lista con ID ${id} no encontrada`);
@@ -56,54 +46,44 @@ export class ListsService {
   }
 
   /**
-   * Agrega una nueva lista al arreglo en memoria.
+   * Crea y persiste una nueva lista.
    */
-  create(dto: CreateListDto): List {
-    const newList: List = {
-      id: this.currentId++,
+  async create(dto: CreateListDto): Promise<List> {
+    const newList = this.listRepository.create({
       name: dto.name,
       items: dto.items,
-    };
+    });
 
-    this.lists.push(newList);
-    return newList;
+    return this.listRepository.save(newList);
   }
 
   /**
    * Actualiza los datos de una lista existente mediante reemplazo total.
-   *
-   * Se utiliza el operador Spread (...existente, ...dto) para fusionar
-   * las propiedades conservando el identificador inmutable.
    */
-  update(id: number, dto: UpdateListDto): List {
-    const index = this.lists.findIndex((item) => item.id === id);
+  async update(id: number, dto: UpdateListDto): Promise<List> {
+    const list = await this.listRepository.findOneBy({ id });
 
-    if (index === -1) {
+    if (!list) {
       throw new NotFoundException(`Lista con ID ${id} no encontrada`);
     }
 
-    // Reemplazo conservando el ID con spread operator
-    const updatedList: List = {
-      ...this.lists[index],
-      name: dto.name,
-      items: dto.items,
-    };
+    list.name = dto.name;
+    list.items = dto.items;
 
-    this.lists[index] = updatedList;
-    return updatedList;
+    return this.listRepository.save(list);
   }
 
   /**
-   * Elimina una lista del almacenamiento en memoria.
+   * Elimina una lista de la base de datos.
    */
-  remove(id: number): { message: string } {
-    const index = this.lists.findIndex((item) => item.id === id);
+  async remove(id: number): Promise<{ message: string }> {
+    const list = await this.listRepository.findOneBy({ id });
 
-    if (index === -1) {
+    if (!list) {
       throw new NotFoundException(`Lista con ID ${id} no encontrada`);
     }
 
-    this.lists.splice(index, 1);
+    await this.listRepository.remove(list);
     return { message: `Lista con ID ${id} eliminada exitosamente` };
   }
 }
