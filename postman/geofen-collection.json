@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b3e02914-f58c-4ad2-9be7-e54fa91c1012",
     "name": "GeoFen API REST - Pruebas y Ejemplos",
-    "description": "Colección de pruebas para GeoFen API. Incluye casos de éxito (200, 201) y casos de validación y error (400, 404).",
+    "description": "Colección de pruebas para GeoFen API. Incluye casos de éxito (200, 201), conflictos (409) y casos de validación y error (400, 404). Los datos se guardan en PostgreSQL.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -21,7 +21,7 @@
               "port": "3000",
               "path": ["lists"]
             },
-            "description": "Retorna el arreglo completo de listas en memoria (HTTP 200)."
+            "description": "Retorna el arreglo completo de listas guardadas en PostgreSQL (HTTP 200)."
           },
           "response": []
         },
@@ -37,7 +37,7 @@
               "port": "3000",
               "path": ["lists", "1"]
             },
-            "description": "Retorna la lista con ID 1 (HTTP 200)."
+            "description": "Retorna la lista con ID 1 (HTTP 200). Si el ID no existe en la base, ajustarlo al ID de una lista creada."
           },
           "response": []
         },
@@ -94,7 +94,7 @@
               "port": "3000",
               "path": ["lists"]
             },
-            "description": "Crea una nueva lista con CreateListDto válido y responde HTTP 201 Created."
+            "description": "Crea una nueva lista en la base de datos con datos válidos y responde HTTP 201 Created."
           },
           "response": []
         },
@@ -144,7 +144,7 @@
               "port": "3000",
               "path": ["lists", "1"]
             },
-            "description": "Reemplazo completo usando spread operator en el Service (HTTP 200)."
+            "description": "Actualiza la lista con ID 1 y guarda los cambios en PostgreSQL (HTTP 200)."
           },
           "response": []
         },
@@ -160,14 +160,14 @@
               "port": "3000",
               "path": ["lists", "2"]
             },
-            "description": "Elimina la lista con ID 2 de la memoria (HTTP 200)."
+            "description": "Elimina la lista con ID 2 de la base de datos (HTTP 200)."
           },
           "response": []
         }
       ]
     },
     {
-      "name": "Tiendas (Stores Read-Only)",
+      "name": "Tiendas (Stores CRUD)",
       "item": [
         {
           "name": "1. GET - Obtener todas las tiendas",
@@ -181,7 +181,7 @@
               "port": "3000",
               "path": ["stores"]
             },
-            "description": "Retorna las 3 tiendas precargadas de Pasto (HTTP 200)."
+            "description": "Retorna las tiendas guardadas en PostgreSQL (HTTP 200). Si la base está vacía, retorna un arreglo vacío."
           },
           "response": []
         },
@@ -197,7 +197,7 @@
               "port": "3000",
               "path": ["stores", "1"]
             },
-            "description": "Retorna Éxito Panamericana (HTTP 200)."
+            "description": "Retorna la tienda con ID 1 (HTTP 200). Requiere haber creado una tienda con el POST de éxito."
           },
           "response": []
         },
@@ -214,6 +214,122 @@
               "path": ["stores", "888"]
             },
             "description": "Lanza NotFoundException temprana si la tienda no existe (HTTP 404)."
+          },
+          "response": []
+        },
+        {
+          "name": "4. POST - Crear tienda (Éxito)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Éxito Panamericana\",\n  \"chain\": \"Éxito\",\n  \"address\": \"Av. Panamericana # 22-10, Pasto, Nariño\",\n  \"latitude\": 1.2136,\n  \"longitude\": -77.2811,\n  \"schedule\": \"Lun-Dom 8:00-21:00\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/stores",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores"]
+            },
+            "description": "Crea una tienda nueva y responde HTTP 201 Created con el ID asignado. Ejecutar antes de las pruebas que usan ID 1."
+          },
+          "response": []
+        },
+        {
+          "name": "5. POST - Error 409 Tienda duplicada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Éxito Panamericana\",\n  \"chain\": \"Éxito\",\n  \"address\": \"Av. Panamericana # 22-10, Pasto, Nariño\",\n  \"latitude\": 1.2136,\n  \"longitude\": -77.2811,\n  \"schedule\": \"Lun-Dom 8:00-21:00\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/stores",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores"]
+            },
+            "description": "Intenta crear una tienda con la misma chain y address que la tienda ya creada. Responde HTTP 409 Conflict. Ejecutar después del POST de éxito."
+          },
+          "response": []
+        },
+        {
+          "name": "6. POST - Error 400 Validación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"chain\": \"Éxito\",\n  \"address\": \"Calle 1 # 2-3, Pasto\",\n  \"latitude\": 95,\n  \"longitude\": -200\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/stores",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores"]
+            },
+            "description": "Nombre vacío, latitud fuera de rango (mayor a 90) y longitud fuera de rango (menor a -180). Responde HTTP 400 Bad Request con los mensajes de class-validator."
+          },
+          "response": []
+        },
+        {
+          "name": "7. PATCH - Actualizar tienda (Parcial)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schedule\": \"Lun-Sab 8:00-20:00\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/stores/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "1"]
+            },
+            "description": "Actualiza solo el campo schedule de la tienda con ID 1 (HTTP 200). Los demás campos no se modifican."
+          },
+          "response": []
+        },
+        {
+          "name": "8. DELETE - Eliminar tienda por ID (Éxito)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/stores/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "1"]
+            },
+            "description": "Elimina la tienda con ID 1 de la base de datos (HTTP 200). Ejecutar al final de la secuencia de pruebas de tiendas."
           },
           "response": []
         }

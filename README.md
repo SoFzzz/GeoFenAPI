@@ -1,19 +1,19 @@
-# GeoFen API REST 📍🛒
+# GeoFen API REST
 
-API RESTful construida con **NestJS** y **TypeScript** para la gestión de listas de compras y consulta de establecimientos comerciales de referencia. Diseñada bajo un enfoque arquitectónico modular, limpio y didáctico (KISS) para comprender en profundidad los conceptos esenciales de backend: **Módulos**, **Controladores**, **Servicios**, **DTOs** e **Inyección de Dependencias (DI)**.
+API RESTful construida con **NestJS** y **TypeScript** para la gestión de listas de compras y consulta de establecimientos comerciales de referencia. Diseñada bajo un enfoque arquitectónico modular, limpio y didáctico (KISS) para comprender en profundidad los conceptos esenciales de backend: **Módulos**, **Controladores**, **Servicios**, **DTOs**, **Inyección de Dependencias (DI)** y **persistencia con TypeORM**.
 
 ---
 
-## 📌 1. ¿Qué es GeoFen?
+## 1. ¿Qué es GeoFen?
 
 **GeoFen** es una plataforma orientada a la optimización de compras cotidianas. Permite a los usuarios crear sus listas de compras y, con base en su ubicación geográfica, descubrir tiendas cercanas y comparar precios de productos.
 
 > **Alcance de esta entrega:**  
-> Implementación del **núcleo backend base (MVP)**: una API RESTful sin dependencias de bases de datos pesadas ni interfaces gráficas, persistida temporalmente en memoria y documentada con **Swagger** y colecciones de **Postman**.
+> Implementación del **núcleo backend base (MVP)**: una API RESTful con persistencia en **PostgreSQL** mediante **TypeORM**, documentada con **Swagger** y colecciones de **Postman**.
 
 ---
 
-## 🏗️ 2. Arquitectura y Flujo de Datos
+## 2. Arquitectura y Flujo de Datos
 
 La aplicación sigue el patrón estándar de NestJS con separación estricta de responsabilidades (Single Responsibility Principle):
 
@@ -46,20 +46,20 @@ La aplicación sigue el patrón estándar de NestJS con separación estricta de 
 │  - Lanza excepciones nativas (NotFoundException, etc.) │
 └──────────────────────┬─────────────────────────────────┘
                        │
-                       ▼  Lectura / Escritura
+                       ▼  Lectura / Escritura (TypeORM)
 ┌────────────────────────────────────────────────────────┐
-│  Almacenamiento Temporal (Arreglo en Memoria)          │
-│  - lists: List[]                                       │
-│  - stores: Store[]                                     │
+│  Persistencia en PostgreSQL (Docker Compose)           │
+│  - Entidad List  -> tabla lists                        │
+│  - Entidad Store -> tabla stores (único chain+address) │
 └──────────────────────┬─────────────────────────────────┘
                        │
-                       ▼  HTTP Response (200, 201, 400, 404)
+                       ▼  HTTP Response (200, 201, 400, 404, 409)
 [ Cliente HTTP ] (Postman / Swagger)
 ```
 
 ---
 
-## 📂 3. Estructura del Proyecto
+## 3. Estructura del Proyecto
 
 ```text
 geofen-api/
@@ -73,19 +73,27 @@ geofen-api/
 │   │   ├── dto/
 │   │   │   ├── create-list.dto.ts  # Validaciones para creación
 │   │   │   └── update-list.dto.ts  # Validaciones para actualización
-│   │   ├── interfaces/
-│   │   │   └── list.interface.ts   # Contrato de datos de la lista
+│   │   ├── entities/
+│   │   │   └── list.entity.ts      # Entidad TypeORM (tabla lists)
 │   │   ├── lists.controller.ts     # Enrutamiento HTTP
 │   │   ├── lists.module.ts         # Encapsulamiento del módulo
-│   │   └── lists.service.ts        # Lógica de negocio y persistencia en memoria
-│   ├── stores/                     # Módulo de Tiendas (Solo lectura)
-│   │   ├── interfaces/
-│   │   │   └── store.interface.ts  # Contrato de datos de la tienda
+│   │   └── lists.service.ts        # Lógica de negocio y acceso a PostgreSQL
+│   ├── stores/                     # Módulo de Tiendas (CRUD)
+│   │   ├── dto/
+│   │   │   ├── create-store.dto.ts # Validaciones para creación
+│   │   │   └── update-store.dto.ts # Actualización parcial (PartialType)
+│   │   ├── entities/
+│   │   │   └── store.entity.ts     # Entidad TypeORM (tabla stores)
 │   │   ├── stores.controller.ts    # Enrutamiento HTTP
 │   │   ├── stores.module.ts        # Encapsulamiento del módulo
-│   │   └── stores.service.ts       # Datos precargados de Pasto
-│   ├── app.module.ts               # Módulo raíz que conecta Listas y Tiendas
+│   │   └── stores.service.ts       # Lógica de negocio y acceso a PostgreSQL
+│   ├── common/
+│   │   └── transformers/
+│   │       └── decimal.transformer.ts # Convierte decimales de PostgreSQL a number
+│   ├── app.module.ts               # Módulo raíz que conecta Listas, Tiendas y TypeORM
 │   └── main.ts                     # Bootstrap, ValidationPipe y Swagger en /api
+├── .env.example                    # Variables de entorno de ejemplo
+├── docker-compose.yml              # PostgreSQL y pgAdmin
 ├── package.json                    # Dependencias y scripts
 ├── tsconfig.json                   # Configuración del compilador TypeScript
 └── README.md                       # Documentación principal
@@ -93,7 +101,7 @@ geofen-api/
 
 ---
 
-## 🛠️ 4. Comandos Utilizados y Cómo Correr el Proyecto
+## 4. Comandos Utilizados y Cómo Correr el Proyecto
 
 ### Dependencias Instaladas
 El proyecto utiliza únicamente las librerías necesarias para cumplir el alcance:
@@ -136,6 +144,8 @@ npm install @nestjs/typeorm typeorm pg @nestjs/config
    ```bash
    npm run start:dev
    ```
+   - Con `DB_SYNCHRONIZE=true` en `.env`, TypeORM crea las tablas `lists` y `stores` al arrancar la API.
+   - La base arranca vacía. No hay tiendas precargadas, así que hay que crearlas con `POST /stores`.
 
 4. **Acceder a los servicios:**
    - **API Base:** `http://localhost:3000`
@@ -143,7 +153,7 @@ npm install @nestjs/typeorm typeorm pg @nestjs/config
 
 ---
 
-## 📡 5. Tabla de Endpoints de la API
+## 5. Tabla de Endpoints de la API
 
 Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando las convenciones RESTful:
 
@@ -152,14 +162,34 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 | **Lists** | `GET` | `/lists` | `findAll()` | `200 OK` | Retorna todas las listas de compras |
 | **Lists** | `GET` | `/lists/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de una lista por ID numérico |
 | **Lists** | `POST` | `/lists` | `create(dto)` | `201 Created` | Crea una lista validando el body |
-| **Lists** | `PUT` | `/lists/:id` | `update(id, dto)` | `200 OK` / `404` | Reemplazo completo usando spread operator |
+| **Lists** | `PUT` | `/lists/:id` | `update(id, dto)` | `200 OK` / `404` | Reemplazo completo de nombre e items |
 | **Lists** | `DELETE` | `/lists/:id` | `remove(id)` | `200 OK` / `404` | Elimina una lista por ID |
-| **Stores** | `GET` | `/stores` | `findAll()` | `200 OK` | Lista de tiendas precargadas (Pasto) |
+| **Stores** | `GET` | `/stores` | `findAll()` | `200 OK` | Lista todas las tiendas guardadas en la base |
 | **Stores** | `GET` | `/stores/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de una tienda por ID |
+| **Stores** | `POST` | `/stores` | `create(dto)` | `201 Created` / `400` / `409` | Crea una tienda. `409` si ya existe la misma cadena y dirección |
+| **Stores** | `PATCH` | `/stores/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de una tienda |
+| **Stores** | `DELETE` | `/stores/:id` | `remove(id)` | `200 OK` / `404` | Elimina una tienda por ID |
+
+### Ejemplo de body para `POST /stores`
+
+```json
+{
+  "name": "Éxito Panamericana",
+  "chain": "Éxito",
+  "address": "Av. Panamericana # 22-10, Pasto, Nariño",
+  "latitude": 1.2136,
+  "longitude": -77.2811,
+  "schedule": "Lun-Dom 8:00-21:00"
+}
+```
+
+- `latitude` debe estar entre `-90` y `90`, y `longitude` entre `-180` y `180`.
+- `schedule` es opcional.
+- No se pueden repetir una `chain` y una `address` juntas. Si se intenta, la API responde `409 Conflict`.
 
 ---
 
-## 💡 6. Conceptos Clave Explicados
+## 6. Conceptos Clave Explicados
 
 1. **Módulo (`@Module`):**  
    Organiza la aplicación en bloques funcionales cohesivos. Cada módulo declara qué controladores expone (`controllers`) y qué servicios provee (`providers`).
@@ -168,9 +198,10 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 3. **Servicio (`@Injectable`):**  
    Aloja la lógica de negocio y las operaciones sobre los datos. Nunca sabe de HTTP ni de peticiones web directas; solo procesa datos y retorna resultados o lanza excepciones.
 4. **Inyección de Dependencias (DI) & Singleton:**  
-   NestJS instancia los servicios una sola vez al arrancar y los inyecta en el constructor de los controladores. Esto evita crear múltiples instancias (`new ListsService()`) y asegura que el arreglo en memoria se mantenga consistente.
+   NestJS instancia los servicios una sola vez al arrancar y los inyecta en el constructor de los controladores. Esto evita crear múltiples instancias (`new ListsService()`) y hace que todos los controladores usen el mismo servicio y, por tanto, la misma conexión a la base de datos.
 5. **DTO y `class-validator`:**  
    Define el contrato estricto de entrada. Si un cliente envía campos no válidos o tipos incorrectos, el `ValidationPipe` rechaza la petición con `400 Bad Request` antes de que toque la lógica del servicio.
 6. **Retorno Temprano (Early Return):**  
    Patrón de programación limpia donde los casos de error o condiciones no cumplidas se evalúan al inicio de la función para cortar la ejecución (`throw new NotFoundException(...)`), eliminando la necesidad de bloques `else` anidados.
-
+7. **Entidad (TypeORM):**  
+   Clase decorada con `@Entity` que representa una tabla de PostgreSQL. Sus columnas (`@Column`) definen la estructura de los datos guardados. La restricción única de `stores` (`chain` + `address`) evita tiendas duplicadas a nivel de base de datos.
