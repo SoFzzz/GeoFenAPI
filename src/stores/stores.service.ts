@@ -1,50 +1,94 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Store } from './interfaces/store.interface';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Store } from './entities/store.entity';
+import { CreateStoreDto } from './dto/create-store.dto';
+import { UpdateStoreDto } from './dto/update-store.dto';
 
 /**
- * StoresService: Capa de servicio de solo lectura para la consulta de tiendas cercanas.
+ * StoresService: Lógica de negocio y persistencia en PostgreSQL para Tiendas.
  *
- * Sigue el mismo patrón @Injectable() con alcance Singleton que ListsService.
+ * Usa el repositorio de TypeORM inyectado con @InjectRepository.
  */
 @Injectable()
 export class StoresService {
-  // Arreglo en memoria con 3 tiendas precargadas de la ciudad de Pasto (Nariño)
-  private readonly stores: Store[] = [
-    {
-      id: 1,
-      name: 'Éxito Panamericana',
-      address: 'Av. Panamericana # 22-10, Pasto, Nariño',
-    },
-    {
-      id: 2,
-      name: 'Alkosto Centro',
-      address: 'Calle 19 # 20-56, Centro, Pasto, Nariño',
-    },
-    {
-      id: 3,
-      name: 'Supermercado Amorel',
-      address: 'Carrera 27 # 16-45, San Andrés, Pasto, Nariño',
-    },
-  ];
+  constructor(
+    @InjectRepository(Store)
+    private readonly storeRepository: Repository<Store>,
+  ) {}
 
   /**
-   * Retorna el listado completo de tiendas comerciales disponibles.
+   * Retorna todas las tiendas ordenadas por id ascendente.
    */
-  findAll(): Store[] {
-    return this.stores;
+  async findAll(): Promise<Store[]> {
+    return this.storeRepository.find({ order: { id: 'ASC' } });
   }
 
   /**
-   * Retorna una tienda específica por su identificador.
+   * Retorna una tienda por su identificador.
    * Aplica retorno temprano con NotFoundException si no existe.
    */
-  findOne(id: number): Store {
-    const store = this.stores.find((item) => item.id === id);
+  async findOne(id: number): Promise<Store> {
+    const store = await this.storeRepository.findOneBy({ id });
 
     if (!store) {
       throw new NotFoundException(`Tienda con ID ${id} no encontrada`);
     }
 
     return store;
+  }
+
+  /**
+   * Crea una tienda. Rechaza duplicados por cadena y dirección.
+   */
+  async create(dto: CreateStoreDto): Promise<Store> {
+    const existing = await this.storeRepository.findOneBy({
+      chain: dto.chain,
+      address: dto.address,
+    });
+
+    if (existing) {
+      throw new ConflictException(
+        `Ya existe una tienda de la cadena ${dto.chain} en la dirección ${dto.address}`,
+      );
+    }
+
+    const store = this.storeRepository.create(dto);
+    return this.storeRepository.save(store);
+  }
+
+  /**
+   * Actualiza parcialmente una tienda. Si el cambio coincide con otra tienda
+   * por cadena y dirección, lanza ConflictException.
+   */
+  async update(id: number, dto: UpdateStoreDto): Promise<Store> {
+    const store = await this.findOne(id);
+    this.storeRepository.merge(store, dto);
+
+    const duplicated = await this.storeRepository.findOneBy({
+      chain: store.chain,
+      address: store.address,
+    });
+
+    if (duplicated && duplicated.id !== id) {
+      throw new ConflictException(
+        `Ya existe una tienda de la cadena ${store.chain} en la dirección ${store.address}`,
+      );
+    }
+
+    return this.storeRepository.save(store);
+  }
+
+  /**
+   * Elimina una tienda por su identificador.
+   */
+  async remove(id: number): Promise<{ message: string }> {
+    const store = await this.findOne(id);
+    await this.storeRepository.remove(store);
+    return { message: `Tienda con ID ${id} eliminada exitosamente` };
   }
 }
