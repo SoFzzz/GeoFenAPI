@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -26,6 +27,9 @@ import { PricesModule } from './prices/prices.module';
  * synchronize: Crea/actualiza las tablas según las entidades. Es cómodo en
  * desarrollo, pero en producción DEBE ser false: un cambio en una entidad
  * podría alterar o borrar columnas y perder datos. Allí se usan migraciones.
+ *
+ * migrations / migrationsRun: Registra las migraciones de src/database/migrations
+ * y, con DB_MIGRATIONS_RUN=true, las ejecuta al arrancar la aplicación.
  */
 @Module({
   imports: [
@@ -41,6 +45,8 @@ import { PricesModule } from './prices/prices.module';
         database: config.get<string>('DB_NAME'),
         autoLoadEntities: true,
         synchronize: config.get<string>('DB_SYNCHRONIZE') === 'true',
+        migrations: [join(__dirname, 'database', 'migrations', '*.{ts,js}')],
+        migrationsRun: config.get<string>('DB_MIGRATIONS_RUN') === 'true',
       }),
     }),
     ListsModule,
