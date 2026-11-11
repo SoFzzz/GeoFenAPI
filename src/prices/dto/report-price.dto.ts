@@ -1,12 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
+  IsDateString,
+  IsISO4217CurrencyCode,
   IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
-  Length,
 } from 'class-validator';
 
 /**
@@ -43,8 +45,10 @@ export class ReportPriceDto {
     default: 'COP',
   })
   @IsOptional()
-  @IsString({ message: 'La moneda debe ser una cadena de texto' })
-  @Length(3, 3, { message: 'La moneda debe tener exactamente 3 caracteres (código ISO)' })
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  )
+  @IsISO4217CurrencyCode({ message: 'La moneda debe ser un código ISO 4217 válido (ej. COP)' })
   currency?: string;
 
   @ApiPropertyOptional({
@@ -55,4 +59,13 @@ export class ReportPriceDto {
   @IsOptional()
   @IsString({ message: 'La fuente debe ser texto' })
   source?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-11-10T15:30:00Z',
+    description:
+      'Fecha ISO 8601 en que se extrajo el precio. Con ella se detectan reportes duplicados; si se omite se usa la fecha actual',
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'scrapedAt debe ser una fecha ISO 8601 válida' })
+  scrapedAt?: string;
 }

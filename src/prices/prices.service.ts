@@ -49,23 +49,52 @@ export class PricesService {
   }
 
   /**
-   * Reporta un nuevo precio para un producto en una tienda.
-   * Valida existencia de producto y tienda previamente.
+   * Precio más reciente de un producto en cada tienda (incluye la tienda).
+   * Lanza 404 si el producto no existe.
    */
-  async reportPrice(dto: ReportPriceDto): Promise<Price> {
+  async findLatestByProduct(productId: number): Promise<Price[]> {
+    await this.productsService.findOne(productId);
+
+    return this.priceRepository
+      .createQueryBuilder('price')
+      .innerJoinAndSelect('price.store', 'store')
+      .where('price.productId = :productId', { productId })
+      .distinctOn(['price.storeId'])
+      .orderBy('price.storeId', 'ASC')
+      .addOrderBy('price.scrapedAt', 'DESC')
+      .addOrderBy('price.id', 'DESC')
+      .getMany();
+  }
+
+  /**
+   * Reporta un precio para un producto en una tienda.
+   * Si ya existe un reporte con el mismo producto, tienda y scrapedAt se ignora
+   * y se devuelve el existente (created = false); si no, se guarda (created = true).
+   */
+  async reportPrice(
+    dto: ReportPriceDto,
+  ): Promise<{ price: Price; created: boolean }> {
     await this.productsService.findOne(dto.productId);
     await this.storesService.findOne(dto.storeId);
 
-    const price = this.priceRepository.create({
-      ...dto,
-      currency: dto.currency || 'COP',
-      source: dto.source || 'scraper',
-      scrapedAt: new Date(),
+    const row = this.toRow(dto, new Date());
+    const inserted = await this.insertIgnoringDuplicates([row]);
+
+    const price = await this.priceRepository.findOneOrFail({
+      where: {
+        productId: row.productId,
+        storeId: row.storeId,
+        scrapedAt: row.scrapedAt,
+      },
     });
 
-    return this.priceRepository.save(price);
+    return { price, created: inserted > 0 };
   }
 
+  /**
+   * Reporta precios en lote (todo o nada ante inexistentes). Los duplicados,
+   * tanto contra la base como dentro del mismo lote, se ignoran sin error.
+   */
   async reportBulk(dtos: ReportPriceDto[]) {
     const productIds = [...new Set(dtos.map((dto) => dto.productId))];
     const storeIds = [...new Set(dtos.map((dto) => dto.storeId))];
@@ -90,17 +119,49 @@ export class PricesService {
       });
     }
 
-    const scrapedAt = new Date();
-    const prices = this.priceRepository.create(
-      dtos.map((dto) => ({
-        ...dto,
-        currency: dto.currency || 'COP',
-        source: dto.source || 'scraper',
-        scrapedAt,
-      })),
+    const now = new Date();
+    const saved = await this.insertIgnoringDuplicates(
+      dtos.map((dto) => this.toRow(dto, now)),
     );
-    await this.priceRepository.save(prices);
 
-    return { received: dtos.length, saved: prices.length };
+    return {
+      received: dtos.length,
+      saved,
+      duplicates: dtos.length - saved,
+    };
+  }
+
+  /**
+   * Convierte el DTO en la fila a insertar aplicando los valores por defecto.
+   * Sin scrapedAt usa la fecha indicada (la actual).
+   */
+  private toRow(dto: ReportPriceDto, now: Date) {
+    return {
+      productId: dto.productId,
+      storeId: dto.storeId,
+      price: dto.price,
+      currency: dto.currency || 'COP',
+      source: dto.source || 'scraper',
+      scrapedAt: dto.scrapedAt ? new Date(dto.scrapedAt) : now,
+    };
+  }
+
+  /**
+   * Inserta las filas con ON CONFLICT DO NOTHING sobre la restricción única
+   * y devuelve cuántas se guardaron realmente.
+   */
+  private async insertIgnoringDuplicates(
+    rows: ReturnType<PricesService['toRow']>[],
+  ): Promise<number> {
+    const result = await this.priceRepository
+      .createQueryBuilder()
+      .insert()
+      .into(Price)
+      .values(rows)
+      .orIgnore()
+      .returning('id')
+      .execute();
+
+    return result.raw.length;
   }
 }

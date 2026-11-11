@@ -5,6 +5,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { Product } from '../../products/entities/product.entity';
@@ -16,8 +17,11 @@ import { decimalTransformer } from '../../common/transformers/decimal.transforme
  *
  * Incluye el valor numérico (con decimalTransformer), moneda ISO (ej. 'COP'),
  * fuente del dato (ej. 'scraper', 'manual') y fecha en que fue extraído/reportado.
+ * La restricción única (producto, tienda, scrapedAt) evita reportes duplicados;
+ * el mismo precio con otra fecha queda como historial.
  */
 @Entity({ name: 'prices' })
+@Unique('uq_prices_product_store_scraped_at', ['productId', 'storeId', 'scrapedAt'])
 export class Price {
   @PrimaryGeneratedColumn()
   id: number;
