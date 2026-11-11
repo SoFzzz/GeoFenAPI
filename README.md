@@ -26,7 +26,7 @@ La aplicación sigue el patrón estándar de NestJS con separación estricta de 
        ▼  HTTP Request (JSON + Verbo)
 ┌────────────────────────────────────────────────────────┐
 │  ValidationPipe Global (main.ts)                       │
-│  - Limpia propiedades no deseadas (whitelist: true)    │
+│  - Rechaza propiedades no declaradas con 400           │
 │  - Valida reglas de tipo con class-validator           │
 └──────────────────────┬─────────────────────────────────┘
                        │
@@ -81,7 +81,9 @@ geofen-api/
 │   ├── stores/                     # Módulo de Tiendas (CRUD)
 │   │   ├── dto/
 │   │   │   ├── create-store.dto.ts # Validaciones para creación
-│   │   │   └── update-store.dto.ts # Actualización parcial (PartialType)
+│   │   │   ├── update-store.dto.ts # Actualización parcial (PartialType)
+│   │   │   ├── bulk-stores.dto.ts  # Lote de tiendas del scraper (máx. 500)
+│   │   │   └── nearby-stores-query.dto.ts # Parámetros de /stores/nearby
 │   │   ├── entities/
 │   │   │   └── store.entity.ts     # Entidad TypeORM (tabla stores)
 │   │   ├── stores.controller.ts    # Enrutamiento HTTP
@@ -99,7 +101,8 @@ geofen-api/
 │   ├── products/                   # Módulo de Productos (CRUD y relación con Category)
 │   │   ├── dto/
 │   │   │   ├── create-product.dto.ts
-│   │   │   └── update-product.dto.ts
+│   │   │   ├── update-product.dto.ts
+│   │   │   └── products-query.dto.ts # Paginación y filtro por categoría
 │   │   ├── entities/
 │   │   │   └── product.entity.ts   # Entidad TypeORM (tabla products, ManyToOne Category)
 │   │   ├── products.controller.ts
@@ -107,13 +110,17 @@ geofen-api/
 │   │   └── products.service.ts
 │   ├── prices/                     # Módulo de Precios (reporte y consulta)
 │   │   ├── dto/
-│   │   │   └── report-price.dto.ts # Validación de reporte de precio
+│   │   │   ├── report-price.dto.ts # Validación de reporte de precio
+│   │   │   └── bulk-prices.dto.ts  # Lote de precios del scraper (máx. 1000)
 │   │   ├── entities/
 │   │   │   └── price.entity.ts     # Entidad TypeORM (tabla prices, ManyToOne Product y Store)
 │   │   ├── prices.controller.ts
 │   │   ├── prices.module.ts
 │   │   └── prices.service.ts
+│   ├── auth/
+│   │   └── api-key.guard.ts        # Valida el header x-api-key en los endpoints de escritura
 │   ├── common/
+│   │   ├── pagination.ts           # DTO page/limit y respuesta paginada
 │   │   └── transformers/
 │   │       └── decimal.transformer.ts # Convierte decimales de PostgreSQL a number
 │   ├── app.module.ts               # Módulo raíz que conecta Listas, Tiendas, Categorías, Productos, Precios y TypeORM
@@ -185,28 +192,31 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 
 | Módulo | Método HTTP | Ruta | Método del Service | Código HTTP | Descripción |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Lists** | `GET` | `/lists` | `findAll()` | `200 OK` | Retorna todas las listas de compras |
+| **Lists** | `GET` | `/lists` | `findAll(query)` | `200 OK` / `400` | Listas de compras paginadas (`page`, `limit`) |
 | **Lists** | `GET` | `/lists/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de una lista por ID numérico |
 | **Lists** | `POST` | `/lists` | `create(dto)` | `201 Created` | Crea una lista validando el body |
 | **Lists** | `PUT` | `/lists/:id` | `update(id, dto)` | `200 OK` / `404` | Reemplazo completo de nombre e items |
 | **Lists** | `DELETE` | `/lists/:id` | `remove(id)` | `200 OK` / `404` | Elimina una lista por ID |
-| **Stores** | `GET` | `/stores` | `findAll()` | `200 OK` | Lista todas las tiendas guardadas en la base |
+| **Stores** | `GET` | `/stores` | `findAll(query)` | `200 OK` / `400` | Tiendas paginadas (`page`, `limit`) |
+| **Stores** | `GET` | `/stores/nearby` | `findNearby(query)` | `200 OK` / `400` | Tiendas dentro de un radio, de la más cercana a la más lejana |
 | **Stores** | `GET` | `/stores/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de una tienda por ID |
-| **Stores** | `POST` | `/stores` | `create(dto)` | `201 Created` / `400` / `409` | Crea una tienda. `409` si ya existe la misma cadena y dirección |
-| **Stores** | `PATCH` | `/stores/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de una tienda |
-| **Stores** | `DELETE` | `/stores/:id` | `remove(id)` | `200 OK` / `404` | Elimina una tienda por ID |
+| **Stores** | `POST` | `/stores` | `create(dto)` | `201 Created` / `400` / `401` / `409` | Crea una tienda. `409` si ya existe la misma cadena y dirección. Requiere `x-api-key` |
+| **Stores** | `POST` | `/stores/bulk` | `bulkUpsert(dtos)` | `200 OK` / `400` / `401` | Carga masiva con upsert por cadena y dirección. Requiere `x-api-key` |
+| **Stores** | `PATCH` | `/stores/:id` | `update(id, dto)` | `200 OK` / `400` / `401` / `404` / `409` | Actualización parcial de una tienda. Requiere `x-api-key` |
+| **Stores** | `DELETE` | `/stores/:id` | `remove(id)` | `200 OK` / `401` / `404` | Elimina una tienda por ID. Requiere `x-api-key` |
 | **Categories** | `GET` | `/categories` | `findAll()` | `200 OK` | Retorna todas las categorías |
 | **Categories** | `GET` | `/categories/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de una categoría por ID |
 | **Categories** | `POST` | `/categories` | `create(dto)` | `201 Created` / `400` / `409` | Crea una categoría (nombre único) |
 | **Categories** | `PATCH` | `/categories/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de categoría |
 | **Categories** | `DELETE` | `/categories/:id` | `remove(id)` | `200 OK` / `404` | Elimina una categoría por ID |
-| **Products** | `GET` | `/products` | `findAll(categoryId?)` | `200 OK` / `404` | Catálogo de productos (filtro opcional por `categoryId`) |
+| **Products** | `GET` | `/products` | `findAll(query)` | `200 OK` / `400` / `404` | Catálogo paginado (`page`, `limit`) con filtro opcional por `categoryId` |
 | **Products** | `GET` | `/products/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de un producto por ID |
 | **Products** | `POST` | `/products` | `create(dto)` | `201 Created` / `400` / `404` / `409` | Registra un producto (barcode único, categoría opcional) |
 | **Products** | `PATCH` | `/products/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de un producto |
 | **Products** | `DELETE` | `/products/:id` | `remove(id)` | `200 OK` / `404` | Elimina un producto por ID |
 | **Prices** | `GET` | `/prices` | `findAll(productId?, storeId?)` | `200 OK` | Consulta precios con filtros opcionales por producto y tienda |
-| **Prices** | `POST` | `/prices` | `reportPrice(dto)` | `201 Created` / `400` / `404` | Reporta precio de un producto en una tienda |
+| **Prices** | `POST` | `/prices` | `reportPrice(dto)` | `201 Created` / `400` / `401` / `404` | Reporta precio de un producto en una tienda. Requiere `x-api-key` |
+| **Prices** | `POST` | `/prices/bulk` | `reportBulk(dtos)` | `201 Created` / `400` / `401` / `404` | Reporta precios en lote, todo o nada. Requiere `x-api-key` |
 
 ### Ejemplo de body para `POST /stores`
 
@@ -224,6 +234,59 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 - `latitude` debe estar entre `-90` y `90`, y `longitude` entre `-180` y `180`.
 - `schedule` es opcional.
 - No se pueden repetir una `chain` y una `address` juntas. Si se intenta, la API responde `409 Conflict`.
+
+### Autenticación del scraper (`x-api-key`)
+
+Los endpoints que escriben datos de tiendas y precios (`POST`, `PATCH` y `DELETE` de `/stores`, `POST /stores/bulk`, `POST /prices` y `POST /prices/bulk`) exigen el header `x-api-key`. Las lecturas (`GET`) son públicas.
+
+- La clave se define en `.env` con `SCRAPER_API_KEY` (el valor de `.env.example` es solo de ejemplo; cámbialo).
+- Sin header o con una clave distinta, la API responde `401 Unauthorized`. Si `SCRAPER_API_KEY` no está definida, ningún endpoint protegido acepta peticiones.
+- En Swagger (`/api`), el botón **Authorize** permite escribir la clave una vez para todas las peticiones.
+
+### Carga masiva del scraper
+
+`POST /stores/bulk` recibe hasta 500 tiendas y hace upsert por `(chain, address)`: crea las nuevas y actualiza las existentes. Si el mismo par aparece dos veces en el lote, gana la última aparición.
+
+```bash
+curl -X POST http://localhost:3000/stores/bulk \
+  -H "x-api-key: cambia-esta-clave" -H "Content-Type: application/json" \
+  -d '{"stores":[{"name":"Alkosto Centro","chain":"Alkosto","address":"Cra 27 # 18-30","latitude":1.2136,"longitude":-77.279}]}'
+# {"received":1,"created":1,"updated":0}
+```
+
+`POST /prices/bulk` recibe hasta 1000 precios con la forma de `POST /prices`. Es todo o nada: si algún `productId` o `storeId` no existe, responde `404` con los IDs faltantes y no guarda ninguno.
+
+```bash
+curl -X POST http://localhost:3000/prices/bulk \
+  -H "x-api-key: cambia-esta-clave" -H "Content-Type: application/json" \
+  -d '{"prices":[{"productId":1,"storeId":1,"price":4500}]}'
+# {"received":1,"saved":1}
+```
+
+### Tiendas cercanas
+
+`GET /stores/nearby?lat=&lng=&radiusKm=&chain=` calcula la distancia con la fórmula de Haversine en SQL (sin PostGIS).
+
+| Parámetro | Obligatorio | Descripción |
+| :--- | :--- | :--- |
+| `lat` | Sí | Latitud entre `-90` y `90` |
+| `lng` | Sí | Longitud entre `-180` y `180` |
+| `radiusKm` | No | Radio en kilómetros, entre `0.1` y `100` (por defecto `5`) |
+| `chain` | No | Filtra por cadena, sin distinguir mayúsculas |
+
+Devuelve las tiendas con el campo extra `distanceKm`, ordenadas de la más cercana a la más lejana.
+
+### Paginación
+
+`GET /stores`, `GET /lists` y `GET /products` aceptan `page` (por defecto `1`) y `limit` (por defecto `20`, máximo `100`) y responden:
+
+```json
+{ "data": [], "total": 0, "page": 1, "limit": 20 }
+```
+
+### Propiedades desconocidas
+
+Con `forbidNonWhitelisted: true`, enviar una propiedad que el DTO no declara (en el cuerpo o en la query) devuelve `400 Bad Request` con el mensaje `property <nombre> should not exist`.
 
 ---
 

@@ -5,6 +5,8 @@ import { PricesService } from './prices.service';
 import { Price } from './entities/price.entity';
 import { ProductsModule } from '../products/products.module';
 import { StoresModule } from '../stores/stores.module';
+import { Product } from '../products/entities/product.entity';
+import { Store } from '../stores/entities/store.entity';
 
 /**
  * PricesModule: Módulo funcional para la gestión y consulta de precios.
@@ -12,7 +14,7 @@ import { StoresModule } from '../stores/stores.module';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Price]),
+    TypeOrmModule.forFeature([Price, Product, Store]),
     ProductsModule,
     StoresModule,
   ],

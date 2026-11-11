@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Store } from './entities/store.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
+import { Paginated, PaginationQueryDto, pageOptions, paginated } from '../common/pagination';
+import { NearbyStoresQueryDto } from './dto/nearby-stores-query.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 
 /**
@@ -24,8 +26,35 @@ export class StoresService {
   /**
    * Retorna todas las tiendas ordenadas por id ascendente.
    */
-  async findAll(): Promise<Store[]> {
-    return this.storeRepository.find({ order: { id: 'ASC' } });
+  async findAll(query: PaginationQueryDto): Promise<Paginated<Store>> {
+    const [data, total] = await this.storeRepository.findAndCount({
+      order: { id: 'ASC' },
+      ...pageOptions(query),
+    });
+
+    return paginated(data, total, query);
+  }
+
+  async findNearby({ lat, lng, radiusKm, chain }: NearbyStoresQueryDto) {
+    const distance = `6371 * acos(LEAST(1, cos(radians(:lat)) * cos(radians(store.latitude)) * cos(radians(store.longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(store.latitude))))`;
+
+    const query = this.storeRepository
+      .createQueryBuilder('store')
+      .addSelect(distance, 'distance')
+      .where(`${distance} <= :radiusKm`)
+      .setParameters({ lat, lng, radiusKm })
+      .orderBy('distance', 'ASC');
+
+    if (chain) {
+      query.andWhere('LOWER(store.chain) = LOWER(:chain)', { chain });
+    }
+
+    const { entities, raw } = await query.getRawAndEntities();
+
+    return entities.map((store, index) => ({
+      ...store,
+      distanceKm: Math.round(Number(raw[index].distance) * 100) / 100,
+    }));
   }
 
   /**
@@ -59,6 +88,22 @@ export class StoresService {
 
     const store = this.storeRepository.create(dto);
     return this.storeRepository.save(store);
+  }
+
+  async bulkUpsert(dtos: CreateStoreDto[]) {
+    const byKey = new Map(dtos.map((dto) => [`${dto.chain}|${dto.address}`, dto]));
+    const unique = [...byKey.values()];
+
+    const updated = await this.storeRepository.count({
+      where: unique.map(({ chain, address }) => ({ chain, address })),
+    });
+    await this.storeRepository.upsert(unique, ['chain', 'address']);
+
+    return {
+      received: dtos.length,
+      created: unique.length - updated,
+      updated,
+    };
   }
 
   /**

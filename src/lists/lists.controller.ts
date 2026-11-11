@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -16,6 +17,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../common/pagination';
 import { ListsService } from './lists.service';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
@@ -43,8 +45,8 @@ export class ListsController {
   @Get()
   @ApiOperation({ summary: 'Obtener todas las listas de compras registradas' })
   @ApiResponse({ status: 200, description: 'Listado recuperado exitosamente.' })
-  async findAll(): Promise<List[]> {
-    return this.listsService.findAll();
+  async findAll(@Query() query: PaginationQueryDto) {
+    return this.listsService.findAll(query);
   }
 
   /**

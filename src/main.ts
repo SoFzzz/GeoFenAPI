@@ -16,13 +16,15 @@ async function bootstrap() {
    * - whitelist: true -> Filtra y descarta automáticamente cualquier propiedad
    *   enviada en el JSON que no esté explícitamente declarada en los DTOs,
    *   evitando vulnerabilidades de asignación masiva (Mass Assignment).
+   * - forbidNonWhitelisted: true -> En lugar de descartarlas, responde 400 si llega
+   *   alguna propiedad no declarada (en el cuerpo o en la query).
    * - transform: true -> Transforma los payloads a instancias reales de las clases DTO.
    */
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      forbidNonWhitelisted: false, // Duda para clase: ¿Cambiar a true en producción?
+      forbidNonWhitelisted: true,
     }),
   );
 
@@ -38,6 +40,7 @@ async function bootstrap() {
       'Construida con NestJS para la sustentación de arquitectura de software.',
     )
     .setVersion('1.0')
+    .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'api-key')
     .addTag('lists', 'Operaciones CRUD para listas de compras')
     .addTag('stores', 'Gestión de tiendas comerciales')
     .addTag('categories', 'Gestión de categorías de productos')
