@@ -6,13 +6,16 @@ import {
   HttpStatus,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiOperation,
   ApiQuery,
   ApiResponse,
+  ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { ApiKeyGuard } from '../auth/api-key.guard';
 import { PricesService } from './prices.service';
 import { ReportPriceDto } from './dto/report-price.dto';
 import { Price } from './entities/price.entity';
@@ -57,6 +60,8 @@ export class PricesController {
    * POST /prices
    */
   @Post()
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Reportar o registrar el precio de un producto en una tienda' })
   @ApiResponse({ status: 201, description: 'Precio reportado exitosamente.' })
