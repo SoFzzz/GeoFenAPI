@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   Unique,
   UpdateDateColumn,
@@ -11,6 +12,8 @@ import { decimalTransformer } from '../../common/transformers/decimal.transforme
 /**
  * Entidad Store: tienda comercial con su ubicación geográfica.
  * La restricción única (chain, address) evita duplicados de una misma sucursal.
+ * La columna location es de solo lectura: PostgreSQL la calcula a partir de
+ * latitude y longitude y un índice GIST acelera las búsquedas por radio.
  */
 @Entity({ name: 'stores' })
 @Unique('uq_stores_chain_address', ['chain', 'address'])
@@ -42,6 +45,23 @@ export class Store {
     transformer: decimalTransformer,
   })
   longitude: number;
+
+  /**
+   * Punto geográfico (SRID 4326) generado por la base; no se lee ni se escribe desde la API.
+   */
+  @Index('idx_stores_location', { spatial: true })
+  @Column({
+    type: 'geography',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    generatedType: 'STORED',
+    asExpression:
+      'ST_SetSRID(ST_MakePoint(longitude::double precision, latitude::double precision), 4326)::geography',
+    select: false,
+    insert: false,
+    update: false,
+  })
+  location?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   schedule: string | null;

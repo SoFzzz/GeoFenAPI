@@ -17,6 +17,7 @@ describe('StoresService', () => {
     remove: jest.fn(),
     count: jest.fn(),
     upsert: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   const dto = {
@@ -123,6 +124,54 @@ describe('StoresService', () => {
 
       expect(repo.remove).toHaveBeenCalled();
       expect(result.message).toContain('eliminada');
+    });
+  });
+
+  describe('findNearby', () => {
+    const builder = {
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      setParameters: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getRawAndEntities: jest.fn(),
+    };
+
+    beforeEach(() => {
+      for (const fn of Object.values(builder)) {
+        if (fn !== builder.getRawAndEntities) fn.mockReturnThis();
+      }
+      repo.createQueryBuilder.mockReturnValue(builder);
+      builder.getRawAndEntities.mockResolvedValue({
+        entities: [{ id: 1, ...dto }],
+        raw: [{ distance: '1234.5' }],
+      });
+    });
+
+    it('filtra con ST_DWithin en metros y devuelve distanceKm en kilómetros', async () => {
+      const result = await service.findNearby({
+        lat: 1.2,
+        lng: -77.2,
+        radiusKm: 5,
+      });
+
+      expect(builder.where.mock.calls[0][0]).toContain('ST_DWithin');
+      expect(builder.setParameters).toHaveBeenCalledWith({
+        lat: 1.2,
+        lng: -77.2,
+        radiusMeters: 5000,
+      });
+      expect(builder.andWhere).not.toHaveBeenCalled();
+      expect(result[0].distanceKm).toBe(1.23);
+    });
+
+    it('aplica el filtro por cadena cuando se indica', async () => {
+      await service.findNearby({ lat: 1.2, lng: -77.2, radiusKm: 5, chain: 'Exito' });
+
+      expect(builder.andWhere).toHaveBeenCalledWith(
+        'LOWER(store.chain) = LOWER(:chain)',
+        { chain: 'Exito' },
+      );
     });
   });
 
