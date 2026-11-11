@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiKeyGuard } from '../auth/api-key.guard';
 import { StoresService } from './stores.service';
+import { PaginationQueryDto } from '../common/pagination';
 import { BulkStoresDto } from './dto/bulk-stores.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { NearbyStoresQueryDto } from './dto/nearby-stores-query.dto';
@@ -43,8 +44,8 @@ export class StoresController {
   @Get()
   @ApiOperation({ summary: 'Obtener el catálogo de tiendas comerciales' })
   @ApiResponse({ status: 200, description: 'Catálogo de tiendas obtenido exitosamente.' })
-  async findAll(): Promise<Store[]> {
-    return this.storesService.findAll();
+  async findAll(@Query() query: PaginationQueryDto) {
+    return this.storesService.findAll(query);
   }
 
   @Get('nearby')

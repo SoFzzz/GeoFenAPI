@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Store } from './entities/store.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
+import { Paginated, PaginationQueryDto, pageOptions, paginated } from '../common/pagination';
 import { NearbyStoresQueryDto } from './dto/nearby-stores-query.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 
@@ -25,8 +26,13 @@ export class StoresService {
   /**
    * Retorna todas las tiendas ordenadas por id ascendente.
    */
-  async findAll(): Promise<Store[]> {
-    return this.storeRepository.find({ order: { id: 'ASC' } });
+  async findAll(query: PaginationQueryDto): Promise<Paginated<Store>> {
+    const [data, total] = await this.storeRepository.findAndCount({
+      order: { id: 'ASC' },
+      ...pageOptions(query),
+    });
+
+    return paginated(data, total, query);
   }
 
   async findNearby({ lat, lng, radiusKm, chain }: NearbyStoresQueryDto) {

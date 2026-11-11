@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Paginated, PaginationQueryDto, pageOptions, paginated } from '../common/pagination';
 import { List } from './entities/list.entity';
 import { CreateListDto } from './dto/create-list.dto';
 import { UpdateListDto } from './dto/update-list.dto';
@@ -22,8 +23,13 @@ export class ListsService {
   /**
    * Obtiene la colección completa de listas ordenadas por id.
    */
-  async findAll(): Promise<List[]> {
-    return this.listRepository.find({ order: { id: 'ASC' } });
+  async findAll(query: PaginationQueryDto): Promise<Paginated<List>> {
+    const [data, total] = await this.listRepository.findAndCount({
+      order: { id: 'ASC' },
+      ...pageOptions(query),
+    });
+
+    return paginated(data, total, query);
   }
 
   /**

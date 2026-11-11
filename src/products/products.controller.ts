@@ -14,11 +14,11 @@ import {
 import {
   ApiOperation,
   ApiParam,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
+import { ProductsQueryDto } from './dto/products-query.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
@@ -37,17 +37,10 @@ export class ProductsController {
    */
   @Get()
   @ApiOperation({ summary: 'Obtener catálogo de productos (filtro opcional por categoría)' })
-  @ApiQuery({
-    name: 'categoryId',
-    required: false,
-    description: 'ID de categoría para filtrar productos',
-    example: 1,
-  })
   @ApiResponse({ status: 200, description: 'Listado de productos obtenido exitosamente.' })
   @ApiResponse({ status: 404, description: 'Categoría no encontrada (si se filtra).' })
-  async findAll(@Query('categoryId') categoryId?: string): Promise<Product[]> {
-    const parsedCategoryId = categoryId ? parseInt(categoryId, 10) : undefined;
-    return this.productsService.findAll(parsedCategoryId);
+  async findAll(@Query() query: ProductsQueryDto) {
+    return this.productsService.findAll(query);
   }
 
   /**

@@ -9,6 +9,8 @@ import { Product } from './entities/product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CategoriesService } from '../categories/categories.service';
+import { Paginated, pageOptions, paginated } from '../common/pagination';
+import { ProductsQueryDto } from './dto/products-query.dto';
 
 /**
  * ProductsService: Lógica de negocio y persistencia en PostgreSQL para Productos.
@@ -27,16 +29,20 @@ export class ProductsService {
   /**
    * Retorna todos los productos, opcionalmente filtrados por categoría.
    */
-  async findAll(categoryId?: number): Promise<Product[]> {
+  async findAll(query: ProductsQueryDto): Promise<Paginated<Product>> {
+    const { categoryId } = query;
+
     if (categoryId) {
       await this.categoriesService.findOne(categoryId);
-      return this.productRepository.find({
-        where: { categoryId },
-        order: { name: 'ASC' },
-      });
     }
 
-    return this.productRepository.find({ order: { id: 'ASC' } });
+    const [data, total] = await this.productRepository.findAndCount({
+      where: categoryId ? { categoryId } : {},
+      order: categoryId ? { name: 'ASC' } : { id: 'ASC' },
+      ...pageOptions(query),
+    });
+
+    return paginated(data, total, query);
   }
 
   /**
