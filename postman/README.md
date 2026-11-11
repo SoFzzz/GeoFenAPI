@@ -66,3 +66,28 @@ Orden sugerido: primero las pruebas de lectura (la base estará vacía), luego c
 - **POST Error 400 (Validation):** Nombre vacío y latitud fuera de rango (`95`) -> Espera `400 Bad Request` detallando las reglas rotas.
 - **PATCH Actualizar:** `PATCH http://localhost:3000/stores/1` con `schedule` nuevo -> Espera `200 OK` con la tienda actualizada.
 - **DELETE Eliminar:** `DELETE http://localhost:3000/stores/1` -> Espera `200 OK` confirmando la eliminación.
+
+### C. Categorías (`/categories`)
+
+- **GET Todas:** `GET http://localhost:3000/categories` -> Espera `200 OK`.
+- **POST Éxito:** `POST http://localhost:3000/categories` con `{"name": "Granos y cereales"}` -> Espera `201 Created`.
+- **POST Error 409 (Duplicado):** Enviar misma categoría -> Espera `409 Conflict`.
+- **GET por ID:** `GET http://localhost:3000/categories/1` -> Espera `200 OK`.
+- **PATCH Actualizar:** `PATCH http://localhost:3000/categories/1` con `{"name": "Despensa y granos"}` -> Espera `200 OK`.
+- **DELETE Eliminar:** `DELETE http://localhost:3000/categories/1` -> Espera `200 OK`.
+
+### D. Productos (`/products`)
+
+- **GET Todos:** `GET http://localhost:3000/products` -> Espera `200 OK`.
+- **POST Éxito:** `POST http://localhost:3000/products` con `{"name": "Arroz Diana 1kg", "brand": "Diana", "barcode": "7702354012345", "categoryId": 1}` -> Espera `201 Created`.
+- **GET Filtrado por Categoría:** `GET http://localhost:3000/products?categoryId=1` -> Espera `200 OK` con productos de esa categoría.
+- **GET por ID:** `GET http://localhost:3000/products/1` -> Espera `200 OK`.
+- **PATCH Actualizar:** `PATCH http://localhost:3000/products/1` -> Espera `200 OK`.
+- **DELETE Eliminar:** `DELETE http://localhost:3000/products/1` -> Espera `200 OK`.
+
+### E. Precios (`/prices`)
+
+- **POST Reportar Precio:** `POST http://localhost:3000/prices` con `{"productId": 1, "storeId": 1, "price": 4500, "currency": "COP", "source": "scraper"}` -> Espera `201 Created`.
+- **GET Todos los Precios:** `GET http://localhost:3000/prices` -> Espera `200 OK` ordenados por fecha descendente.
+- **GET Precios por Producto:** `GET http://localhost:3000/prices?productId=1` -> Espera `200 OK` con el historial de precios del producto.
+- **GET Precios por Tienda:** `GET http://localhost:3000/prices?storeId=1` -> Espera `200 OK`.
