@@ -1,7 +1,9 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { requestLogger } from './common/middleware/request-logger.middleware';
 
 /**
  * Punto de entrada principal de GeoFen API.
@@ -9,6 +11,13 @@ import { AppModule } from './app.module';
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  /**
+   * Registra cada petición (método, ruta, estado y duración) y unifica el
+   * formato de los errores con el filtro global.
+   */
+  app.use(requestLogger);
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   /**
    * VALIDATIONPIPE GLOBAL:
@@ -54,11 +63,9 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
 
-  console.log(`====================================================`);
-  console.log(` GeoFen API iniciada exitosamente`);
-  console.log(` - Servidor HTTP:     http://localhost:${port}`);
-  console.log(` - Swagger OpenAPI:   http://localhost:${port}/api`);
-  console.log(`====================================================`);
+  const logger = new Logger('Bootstrap');
+  logger.log(`GeoFen API iniciada en http://localhost:${port}`);
+  logger.log(`Swagger OpenAPI en http://localhost:${port}/api`);
 }
 
 bootstrap();
