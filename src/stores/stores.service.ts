@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Store } from './entities/store.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
+import { NearbyStoresQueryDto } from './dto/nearby-stores-query.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 
 /**
@@ -26,6 +27,28 @@ export class StoresService {
    */
   async findAll(): Promise<Store[]> {
     return this.storeRepository.find({ order: { id: 'ASC' } });
+  }
+
+  async findNearby({ lat, lng, radiusKm, chain }: NearbyStoresQueryDto) {
+    const distance = `6371 * acos(LEAST(1, cos(radians(:lat)) * cos(radians(store.latitude)) * cos(radians(store.longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(store.latitude))))`;
+
+    const query = this.storeRepository
+      .createQueryBuilder('store')
+      .addSelect(distance, 'distance')
+      .where(`${distance} <= :radiusKm`)
+      .setParameters({ lat, lng, radiusKm })
+      .orderBy('distance', 'ASC');
+
+    if (chain) {
+      query.andWhere('LOWER(store.chain) = LOWER(:chain)', { chain });
+    }
+
+    const { entities, raw } = await query.getRawAndEntities();
+
+    return entities.map((store, index) => ({
+      ...store,
+      distanceKm: Math.round(Number(raw[index].distance) * 100) / 100,
+    }));
   }
 
   /**

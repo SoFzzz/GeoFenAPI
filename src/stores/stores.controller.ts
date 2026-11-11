@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -22,6 +23,7 @@ import { ApiKeyGuard } from '../auth/api-key.guard';
 import { StoresService } from './stores.service';
 import { BulkStoresDto } from './dto/bulk-stores.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
+import { NearbyStoresQueryDto } from './dto/nearby-stores-query.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { Store } from './entities/store.entity';
 
@@ -43,6 +45,14 @@ export class StoresController {
   @ApiResponse({ status: 200, description: 'Catálogo de tiendas obtenido exitosamente.' })
   async findAll(): Promise<Store[]> {
     return this.storesService.findAll();
+  }
+
+  @Get('nearby')
+  @ApiOperation({ summary: 'Buscar tiendas cercanas a una ubicación' })
+  @ApiResponse({ status: 200, description: 'Tiendas dentro del radio, de la más cercana a la más lejana.' })
+  @ApiResponse({ status: 400, description: 'Coordenadas o radio inválidos.' })
+  async findNearby(@Query() query: NearbyStoresQueryDto) {
+    return this.storesService.findNearby(query);
   }
 
   /**
