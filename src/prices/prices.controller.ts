@@ -18,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiKeyGuard } from '../auth/api-key.guard';
+import { BulkThrottle } from '../common/throttle/bulk-throttle';
 import { PricesService } from './prices.service';
 import { BulkPricesDto } from './dto/bulk-prices.dto';
 import { LatestPricesQueryDto } from './dto/latest-prices-query.dto';
@@ -77,6 +78,7 @@ export class PricesController {
 
   @Post('bulk')
   @UseGuards(ApiKeyGuard)
+  @BulkThrottle()
   @ApiSecurity('api-key')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Reportar precios en lote (todo o nada); los duplicados se ignoran' })
@@ -84,6 +86,7 @@ export class PricesController {
   @ApiResponse({ status: 400, description: 'Algún precio es inválido o el lote supera 1000 elementos.' })
   @ApiResponse({ status: 401, description: 'API key inválida o ausente.' })
   @ApiResponse({ status: 404, description: 'El lote referencia productos o tiendas inexistentes.' })
+  @ApiResponse({ status: 429, description: 'Demasiadas peticiones: se superó el límite de ingesta masiva.' })
   async reportBulk(@Body() dto: BulkPricesDto) {
     return this.pricesService.reportBulk(dto.prices);
   }

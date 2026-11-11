@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiKeyGuard } from '../auth/api-key.guard';
+import { BulkThrottle } from '../common/throttle/bulk-throttle';
 import { StoresService } from './stores.service';
 import { PaginationQueryDto } from '../common/pagination';
 import { BulkStoresDto } from './dto/bulk-stores.dto';
@@ -88,12 +89,14 @@ export class StoresController {
 
   @Post('bulk')
   @UseGuards(ApiKeyGuard)
+  @BulkThrottle()
   @ApiSecurity('api-key')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Crear o actualizar tiendas en lote (upsert por cadena y dirección)' })
   @ApiResponse({ status: 200, description: 'Lote procesado: cantidad recibida, creadas y actualizadas.' })
   @ApiResponse({ status: 400, description: 'Alguna tienda es inválida o el lote supera 500 elementos.' })
   @ApiResponse({ status: 401, description: 'API key inválida o ausente.' })
+  @ApiResponse({ status: 429, description: 'Demasiadas peticiones: se superó el límite de ingesta masiva.' })
   async bulkUpsert(@Body() dto: BulkStoresDto) {
     return this.storesService.bulkUpsert(dto.stores);
   }
