@@ -61,6 +61,22 @@ export class StoresService {
     return this.storeRepository.save(store);
   }
 
+  async bulkUpsert(dtos: CreateStoreDto[]) {
+    const byKey = new Map(dtos.map((dto) => [`${dto.chain}|${dto.address}`, dto]));
+    const unique = [...byKey.values()];
+
+    const updated = await this.storeRepository.count({
+      where: unique.map(({ chain, address }) => ({ chain, address })),
+    });
+    await this.storeRepository.upsert(unique, ['chain', 'address']);
+
+    return {
+      received: dtos.length,
+      created: unique.length - updated,
+      updated,
+    };
+  }
+
   /**
    * Actualiza parcialmente una tienda. Si el cambio coincide con otra tienda
    * por cadena y dirección, lanza ConflictException.
