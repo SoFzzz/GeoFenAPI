@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ListsModule } from './lists/lists.module';
 import { StoresModule } from './stores/stores.module';
 import { CategoriesModule } from './categories/categories.module';
+import { ProductsModule } from './products/products.module';
 
 /**
  * AppModule: Módulo raíz de la aplicación GeoFen API.
@@ -44,6 +45,7 @@ import { CategoriesModule } from './categories/categories.module';
     ListsModule,
     StoresModule,
     CategoriesModule,
+    ProductsModule,
   ],
   controllers: [],
   providers: [],
