@@ -38,6 +38,7 @@ async function bootstrap() {
       'Construida con NestJS para la sustentación de arquitectura de software.',
     )
     .setVersion('1.0')
+    .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'api-key')
     .addTag('lists', 'Operaciones CRUD para listas de compras')
     .addTag('stores', 'Gestión de tiendas comerciales')
     .addTag('categories', 'Gestión de categorías de productos')

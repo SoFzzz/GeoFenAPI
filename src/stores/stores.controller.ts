@@ -9,13 +9,16 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiOperation,
   ApiParam,
   ApiResponse,
+  ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { ApiKeyGuard } from '../auth/api-key.guard';
 import { StoresService } from './stores.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
@@ -60,6 +63,8 @@ export class StoresController {
    * Crea una nueva tienda validando el cuerpo con CreateStoreDto.
    */
   @Post()
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Registrar una nueva tienda' })
   @ApiResponse({ status: 201, description: 'Tienda creada exitosamente.' })
@@ -74,6 +79,8 @@ export class StoresController {
    * Actualización parcial de una tienda existente.
    */
   @Patch(':id')
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @ApiOperation({ summary: 'Actualizar parcialmente una tienda' })
   @ApiParam({ name: 'id', description: 'ID numérico de la tienda a actualizar', example: 1 })
   @ApiResponse({ status: 200, description: 'Tienda actualizada exitosamente.' })
@@ -92,6 +99,8 @@ export class StoresController {
    * Elimina una tienda.
    */
   @Delete(':id')
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @ApiOperation({ summary: 'Eliminar una tienda por su ID' })
   @ApiParam({ name: 'id', description: 'ID numérico de la tienda a eliminar', example: 1 })
   @ApiResponse({ status: 200, description: 'Tienda eliminada exitosamente.' })
