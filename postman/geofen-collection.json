@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b3e02914-f58c-4ad2-9be7-e54fa91c1012",
     "name": "GeoFen API REST - Pruebas y Ejemplos",
-    "description": "Colección de pruebas para GeoFen API. Incluye casos de éxito (200, 201), conflictos (409) y casos de validación y error (400, 404). Los datos se guardan en PostgreSQL.",
+    "description": "Colección de pruebas para GeoFen API. Incluye casos de éxito (200, 201), conflictos (409) y casos de validación y error (400, 404). Los datos se guardan en PostgreSQL. Las peticiones de escritura sobre tiendas y precios envían el header x-api-key con la variable de colección apiKey.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -21,7 +21,7 @@
               "port": "3000",
               "path": ["lists"]
             },
-            "description": "Retorna el arreglo completo de listas guardadas en PostgreSQL (HTTP 200)."
+            "description": "Retorna el arreglo completo de listas guardadas en PostgreSQL (HTTP 200). Responde con la forma { data, total, page, limit } y acepta ?page= y ?limit=."
           },
           "response": []
         },
@@ -181,7 +181,7 @@
               "port": "3000",
               "path": ["stores"]
             },
-            "description": "Retorna las tiendas guardadas en PostgreSQL (HTTP 200). Si la base está vacía, retorna un arreglo vacío."
+            "description": "Retorna las tiendas guardadas en PostgreSQL (HTTP 200). Si la base está vacía, retorna un arreglo vacío. Responde con la forma { data, total, page, limit } y acepta ?page= y ?limit=."
           },
           "response": []
         },
@@ -223,6 +223,10 @@
             "method": "POST",
             "header": [
               {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -247,6 +251,10 @@
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -273,6 +281,10 @@
             "method": "POST",
             "header": [
               {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -298,6 +310,10 @@
             "method": "PATCH",
             "header": [
               {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -321,7 +337,12 @@
           "name": "8. DELETE - Eliminar tienda por ID (Éxito)",
           "request": {
             "method": "DELETE",
-            "header": [],
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              }
+            ],
             "url": {
               "raw": "http://localhost:3000/stores/1",
               "protocol": "http",
@@ -330,6 +351,223 @@
               "path": ["stores", "1"]
             },
             "description": "Elimina la tienda con ID 1 de la base de datos (HTTP 200). Ejecutar al final de la secuencia de pruebas de tiendas."
+          },
+          "response": []
+        },
+        {
+          "name": "9. POST - Carga masiva de tiendas (Éxito)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stores\": [\n    {\n      \"name\": \"Alkosto Centro\",\n      \"chain\": \"Alkosto\",\n      \"address\": \"Cra 27 # 18-30, Pasto, Nariño\",\n      \"latitude\": 1.2136,\n      \"longitude\": -77.279,\n      \"schedule\": \"Lun-Sáb 9:00-20:00\"\n    },\n    {\n      \"name\": \"Supermercado Amorel\",\n      \"chain\": \"Amorel\",\n      \"address\": \"Calle 18 # 24-10, Pasto, Nariño\",\n      \"latitude\": 1.215,\n      \"longitude\": -77.275\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/stores/bulk",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "bulk"]
+            },
+            "description": "Crea o actualiza tiendas en lote (upsert por cadena y dirección). Responde HTTP 200 con { received, created, updated }. Repetir la petición devuelve created: 0."
+          },
+          "response": []
+        },
+        {
+          "name": "10. POST - Error 401 sin API key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stores\": [\n    {\n      \"name\": \"X\",\n      \"chain\": \"X\",\n      \"address\": \"X\",\n      \"latitude\": 1,\n      \"longitude\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/stores/bulk",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "bulk"]
+            },
+            "description": "Sin el header x-api-key la API rechaza la petición con HTTP 401."
+          },
+          "response": []
+        },
+        {
+          "name": "11. POST - Error 400 propiedad desconocida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stores\": [\n    {\n      \"name\": \"X\",\n      \"chain\": \"X\",\n      \"address\": \"X\",\n      \"latitude\": 1,\n      \"longitude\": 1,\n      \"admin\": true\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/stores/bulk",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "bulk"]
+            },
+            "description": "Una propiedad que el DTO no declara provoca HTTP 400 (forbidNonWhitelisted)."
+          },
+          "response": []
+        },
+        {
+          "name": "12. GET - Tiendas cercanas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/stores/nearby?lat=1.2136&lng=-77.2811&radiusKm=5",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "nearby"],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "1.2136"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.2811"
+                },
+                {
+                  "key": "radiusKm",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Tiendas dentro del radio, de la más cercana a la más lejana, con distanceKm (HTTP 200). Ejecutar después de la carga masiva."
+          },
+          "response": []
+        },
+        {
+          "name": "13. GET - Tiendas cercanas filtrando por cadena",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/stores/nearby?lat=1.2136&lng=-77.2811&chain=alkosto",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "nearby"],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "1.2136"
+                },
+                {
+                  "key": "lng",
+                  "value": "-77.2811"
+                },
+                {
+                  "key": "chain",
+                  "value": "alkosto"
+                }
+              ]
+            },
+            "description": "Igual que la anterior pero solo la cadena indicada, sin distinguir mayúsculas (HTTP 200)."
+          },
+          "response": []
+        },
+        {
+          "name": "14. GET - Error 400 coordenadas inválidas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/stores/nearby?lat=200&lng=0",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores", "nearby"],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "200"
+                },
+                {
+                  "key": "lng",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Latitud fuera de rango (HTTP 400)."
+          },
+          "response": []
+        },
+        {
+          "name": "15. GET - Paginación",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/stores?page=2&limit=2",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "2"
+                },
+                {
+                  "key": "limit",
+                  "value": "2"
+                }
+              ]
+            },
+            "description": "Segunda página de dos elementos. Responde { data, total, page, limit } (HTTP 200)."
+          },
+          "response": []
+        },
+        {
+          "name": "16. GET - Error 400 limit fuera de rango",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/stores?limit=101",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["stores"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "101"
+                }
+              ]
+            },
+            "description": "limit no puede superar 100 (HTTP 400)."
           },
           "response": []
         }
@@ -478,7 +716,7 @@
               "port": "3000",
               "path": ["products"]
             },
-            "description": "Retorna todos los productos registrados (HTTP 200)."
+            "description": "Retorna todos los productos registrados (HTTP 200). Responde con la forma { data, total, page, limit } y acepta ?page= y ?limit=."
           },
           "response": []
         },
@@ -635,6 +873,10 @@
             "method": "POST",
             "header": [
               {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
@@ -653,8 +895,97 @@
             "description": "Reporta el precio de un producto en una tienda (HTTP 201)."
           },
           "response": []
+        },
+        {
+          "name": "4. POST - Carga masiva de precios (Éxito)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prices\": [\n    {\n      \"productId\": 1,\n      \"storeId\": 1,\n      \"price\": 4500\n    },\n    {\n      \"productId\": 1,\n      \"storeId\": 2,\n      \"price\": 4200,\n      \"currency\": \"COP\",\n      \"source\": \"manual\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/prices/bulk",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["prices", "bulk"]
+            },
+            "description": "Reporta varios precios en una sola petición (HTTP 201 con { received, saved }). Requiere que existan el producto 1 y las tiendas 1 y 2 (ajusta los IDs a los de tu base)."
+          },
+          "response": []
+        },
+        {
+          "name": "5. POST - Error 404 lote con producto o tienda inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prices\": [\n    {\n      \"productId\": 1,\n      \"storeId\": 1,\n      \"price\": 4500\n    },\n    {\n      \"productId\": 999,\n      \"storeId\": 888,\n      \"price\": 3000\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/prices/bulk",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["prices", "bulk"]
+            },
+            "description": "Si algún producto o tienda no existe responde HTTP 404 con los IDs faltantes y no guarda ningún precio del lote."
+          },
+          "response": []
+        },
+        {
+          "name": "6. POST - Error 401 sin API key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 1,\n  \"storeId\": 1,\n  \"price\": 4500\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/prices",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["prices"]
+            },
+            "description": "Sin el header x-api-key la API rechaza la petición con HTTP 401."
+          },
+          "response": []
         }
       ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "apiKey",
+      "value": "cambia-esta-clave"
     }
   ]
 }
