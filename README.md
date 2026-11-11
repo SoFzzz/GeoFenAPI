@@ -51,9 +51,12 @@ La aplicación sigue el patrón estándar de NestJS con separación estricta de 
 │  Persistencia en PostgreSQL (Docker Compose)           │
 │  - Entidad List  -> tabla lists                        │
 │  - Entidad Store -> tabla stores (único chain+address) │
+│  - Entidad Category -> tabla categories                │
+│  - Entidad Product -> tabla products (barcode)         │
+│  - Entidad Price -> tabla prices (sin duplicados)      │
 └──────────────────────┬─────────────────────────────────┘
                        │
-                       ▼  HTTP Response (200, 201, 400, 404, 409)
+                       ▼  HTTP Response (200, 201, 400, 401, 404, 409, 429)
 [ Cliente HTTP ] (Postman / Swagger)
 ```
 
@@ -88,7 +91,8 @@ geofen-api/
 │   │   │   └── store.entity.ts     # Entidad TypeORM (tabla stores)
 │   │   ├── stores.controller.ts    # Enrutamiento HTTP
 │   │   ├── stores.module.ts        # Encapsulamiento del módulo
-│   │   └── stores.service.ts       # Lógica de negocio y acceso a PostgreSQL
+│   │   ├── stores.service.ts       # Lógica de negocio y acceso a PostgreSQL
+│   │   └── stores.service.spec.ts  # Pruebas unitarias del servicio
 │   ├── categories/                 # Módulo de Categorías (CRUD)
 │   │   ├── dto/
 │   │   │   ├── create-category.dto.ts
@@ -110,23 +114,42 @@ geofen-api/
 │   │   └── products.service.ts
 │   ├── prices/                     # Módulo de Precios (reporte y consulta)
 │   │   ├── dto/
-│   │   │   ├── report-price.dto.ts # Validación de reporte de precio
-│   │   │   └── bulk-prices.dto.ts  # Lote de precios del scraper (máx. 1000)
+│   │   │   ├── report-price.dto.ts # Validación de reporte de precio (scrapedAt opcional)
+│   │   │   ├── bulk-prices.dto.ts  # Lote de precios del scraper (máx. 1000)
+│   │   │   ├── prices-query.dto.ts # Filtros opcionales productId y storeId de GET /prices
+│   │   │   └── latest-prices-query.dto.ts # productId obligatorio de GET /prices/latest
 │   │   ├── entities/
 │   │   │   └── price.entity.ts     # Entidad TypeORM (tabla prices, ManyToOne Product y Store)
 │   │   ├── prices.controller.ts
 │   │   ├── prices.module.ts
-│   │   └── prices.service.ts
+│   │   ├── prices.service.ts
+│   │   └── prices.service.spec.ts  # Pruebas unitarias del servicio
 │   ├── auth/
 │   │   └── api-key.guard.ts        # Valida el header x-api-key en los endpoints de escritura
 │   ├── common/
+│   │   ├── filters/
+│   │   │   ├── all-exceptions.filter.ts      # Formato unificado de errores y traducción de PostgreSQL
+│   │   │   └── all-exceptions.filter.spec.ts # Pruebas del filtro de errores
+│   │   ├── middleware/
+│   │   │   └── request-logger.middleware.ts  # Log de método, ruta, estado y duración
 │   │   ├── pagination.ts           # DTO page/limit y respuesta paginada
+│   │   ├── throttle/
+│   │   │   └── bulk-throttle.ts    # Decorador @BulkThrottle (límite de carga masiva)
 │   │   └── transformers/
 │   │       └── decimal.transformer.ts # Convierte decimales de PostgreSQL a number
-│   ├── app.module.ts               # Módulo raíz que conecta Listas, Tiendas, Categorías, Productos, Precios y TypeORM
-│   └── main.ts                     # Bootstrap, ValidationPipe y Swagger en /api
+│   ├── database/
+│   │   ├── data-source.ts          # DataSource para la CLI de migraciones
+│   │   └── migrations/             # Migraciones TypeORM (esquema inicial y columna location)
+│   ├── app.module.ts               # Módulo raíz: submódulos, TypeORM y límite de peticiones
+│   └── main.ts                     # Bootstrap, ValidationPipe, filtro de errores y Swagger en /api
+├── test/
+│   ├── config-shim.ts              # Sustituto de @nestjs/config para las pruebas e2e
+│   ├── typeorm-shim.ts             # Sustituto de @nestjs/typeorm para Jest (CommonJS)
+│   ├── jest-e2e.json               # Configuración de Jest para npm run test:e2e
+│   └── prices.e2e-spec.ts          # Pruebas HTTP de /prices (sin base de datos)
 ├── .env.example                    # Variables de entorno de ejemplo
-├── docker-compose.yml              # PostgreSQL y pgAdmin
+├── docker-compose.yml              # PostgreSQL (PostGIS) y pgAdmin
+├── jest.config.ts                  # Configuración de Jest para npm test
 ├── package.json                    # Dependencias y scripts
 ├── tsconfig.json                   # Configuración del compilador TypeScript
 └── README.md                       # Documentación principal
@@ -159,9 +182,9 @@ npm install @nestjs/typeorm typeorm pg @nestjs/config
    cp .env.example .env
    docker compose up -d
    ```
-   - PostgreSQL queda en `localhost:5433` (puerto configurable con `DB_PORT` en `.env`).
-   - pgAdmin queda en `http://localhost:5050` (`admin@geofen.com` / `admin_password`). Para registrar el servidor usar host `postgres`, puerto `5432`, usuario `geofen_user`, contraseña `geofen_password`.
-   - `docker compose down` detiene los contenedores; `docker compose down -v` además borra los datos.
+   - PostgreSQL (imagen `postgis/postgis:15-3.4-alpine`) queda en `localhost:5433` (puerto configurable con `DB_PORT` en `.env`).
+   - pgAdmin queda en `http://localhost:5050` con las credenciales `PGADMIN_EMAIL` y `PGADMIN_PASSWORD` del `.env`. Para registrar el servidor usar host `postgres`, puerto `5432`, usuario `DB_USERNAME` y contraseña `DB_PASSWORD` (por defecto `geofen_user` / `geofen_password`).
+   - `docker compose down` detiene los contenedores; `docker compose down -v` además **borra todos los datos** de la base.
 
 1. **Instalar dependencias:**
    ```bash
@@ -177,12 +200,66 @@ npm install @nestjs/typeorm typeorm pg @nestjs/config
    ```bash
    npm run start:dev
    ```
-   - Con `DB_SYNCHRONIZE=true` en `.env`, TypeORM crea las tablas `lists` y `stores` al arrancar la API.
+   - Con `DB_SYNCHRONIZE=true` en `.env`, TypeORM crea las tablas (`categories`, `products`, `prices`, `lists` y `stores`) al arrancar la API.
    - La base arranca vacía. No hay tiendas precargadas, así que hay que crearlas con `POST /stores`.
 
 4. **Acceder a los servicios:**
    - **API Base:** `http://localhost:3000`
    - **Documentación Swagger UI:** `http://localhost:3000/api`
+
+### Variables de entorno
+
+Se definen en `.env` (copia de `.env.example`). Los valores son los de `.env.example`:
+
+| Variable | Valor de ejemplo | Descripción |
+| :--- | :--- | :--- |
+| `PORT` | `3000` | Puerto HTTP de la API |
+| `DB_HOST` | `localhost` | Host de PostgreSQL |
+| `DB_PORT` | `5433` | Puerto de PostgreSQL en el host (el contenedor escucha en 5432) |
+| `DB_USERNAME` | `geofen_user` | Usuario de PostgreSQL |
+| `DB_PASSWORD` | `geofen_password` | Contraseña de PostgreSQL |
+| `DB_NAME` | `geofen_db` | Nombre de la base de datos |
+| `DB_SYNCHRONIZE` | `true` | Sincroniza las tablas con las entidades al arrancar. En producción `false` |
+| `DB_MIGRATIONS_RUN` | `false` | Ejecuta las migraciones pendientes al arrancar. En producción `true` |
+| `PGADMIN_EMAIL` | `admin@geofen.com` | Usuario de pgAdmin |
+| `PGADMIN_PASSWORD` | `admin_password` | Contraseña de pgAdmin |
+| `PGADMIN_PORT` | `5050` | Puerto de pgAdmin en el host |
+| `SCRAPER_API_KEY` | `cambia-esta-clave` | Clave que se envía en el header `x-api-key` |
+| `THROTTLE_TTL_MS` | `60000` | Ventana del límite de peticiones, en milisegundos |
+| `THROTTLE_LIMIT` | `100` | Peticiones máximas por IP y por ruta en cada ventana |
+| `THROTTLE_BULK_LIMIT` | `10` | Peticiones máximas por IP y por ruta en cada ventana para `/stores/bulk` y `/prices/bulk` |
+
+### Pruebas automatizadas
+
+| Comando | Qué ejecuta |
+| :--- | :--- |
+| `npm test` | Pruebas unitarias de `src/**/*.spec.ts` (servicios con repositorios simulados y el filtro de errores) |
+| `npm run test:watch` | Las mismas pruebas unitarias, repetidas al guardar cambios |
+| `npm run test:cov` | Pruebas unitarias con reporte de cobertura en `coverage/` |
+| `npm run test:e2e` | Pruebas HTTP de `/prices` (`test/prices.e2e-spec.ts`) con el `ValidationPipe` real y el servicio simulado |
+
+Ninguna de las pruebas necesita PostgreSQL ni Docker.
+
+### Migraciones de base de datos
+
+En desarrollo, `DB_SYNCHRONIZE=true` hace que TypeORM sincronice las tablas con las entidades al arrancar. En producción se usa `DB_SYNCHRONIZE=false`, porque la sincronización puede alterar o borrar columnas; el esquema se cambia solo con migraciones.
+
+| Comando | Qué hace |
+| :--- | :--- |
+| `npm run migration:generate -- src/database/migrations/Nombre` | Genera una migración con las diferencias entre las entidades y la base |
+| `npm run migration:run` | Ejecuta las migraciones pendientes |
+| `npm run migration:revert` | Revierte la última migración aplicada |
+
+Las migraciones están en `src/database/migrations/` (esquema inicial y columna `location` de `stores`). En producción: `DB_SYNCHRONIZE=false` y `DB_MIGRATIONS_RUN=true`.
+
+- **Base creada antes de esta versión:** basta con `docker compose up -d`. Con `DB_SYNCHRONIZE=true`, TypeORM crea la extensión PostGIS y la columna `location`.
+- **Empezar desde cero con migraciones:**
+  ```bash
+  docker compose down -v   # borra todos los datos de la base
+  docker compose up -d
+  # en .env: DB_SYNCHRONIZE=false
+  npm run migration:run
+  ```
 
 ---
 
@@ -201,7 +278,7 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 | **Stores** | `GET` | `/stores/nearby` | `findNearby(query)` | `200 OK` / `400` | Tiendas dentro de un radio, de la más cercana a la más lejana |
 | **Stores** | `GET` | `/stores/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de una tienda por ID |
 | **Stores** | `POST` | `/stores` | `create(dto)` | `201 Created` / `400` / `401` / `409` | Crea una tienda. `409` si ya existe la misma cadena y dirección. Requiere `x-api-key` |
-| **Stores** | `POST` | `/stores/bulk` | `bulkUpsert(dtos)` | `200 OK` / `400` / `401` | Carga masiva con upsert por cadena y dirección. Requiere `x-api-key` |
+| **Stores** | `POST` | `/stores/bulk` | `bulkUpsert(dtos)` | `200 OK` / `400` / `401` / `429` | Carga masiva (hasta 500) con upsert por cadena y dirección. Requiere `x-api-key` |
 | **Stores** | `PATCH` | `/stores/:id` | `update(id, dto)` | `200 OK` / `400` / `401` / `404` / `409` | Actualización parcial de una tienda. Requiere `x-api-key` |
 | **Stores** | `DELETE` | `/stores/:id` | `remove(id)` | `200 OK` / `401` / `404` | Elimina una tienda por ID. Requiere `x-api-key` |
 | **Categories** | `GET` | `/categories` | `findAll()` | `200 OK` | Retorna todas las categorías |
@@ -214,9 +291,10 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 | **Products** | `POST` | `/products` | `create(dto)` | `201 Created` / `400` / `404` / `409` | Registra un producto (barcode único, categoría opcional) |
 | **Products** | `PATCH` | `/products/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de un producto |
 | **Products** | `DELETE` | `/products/:id` | `remove(id)` | `200 OK` / `404` | Elimina un producto por ID |
-| **Prices** | `GET` | `/prices` | `findAll(productId?, storeId?)` | `200 OK` | Consulta precios con filtros opcionales por producto y tienda |
-| **Prices** | `POST` | `/prices` | `reportPrice(dto)` | `201 Created` / `400` / `401` / `404` | Reporta precio de un producto en una tienda. Requiere `x-api-key` |
-| **Prices** | `POST` | `/prices/bulk` | `reportBulk(dtos)` | `201 Created` / `400` / `401` / `404` | Reporta precios en lote, todo o nada. Requiere `x-api-key` |
+| **Prices** | `GET` | `/prices` | `findAll(productId?, storeId?)` | `200 OK` / `400` | Consulta precios con filtros opcionales por producto y tienda (enteros positivos) |
+| **Prices** | `GET` | `/prices/latest` | `findLatestByProduct(productId)` | `200 OK` / `400` / `404` | Precio más reciente del producto en cada tienda (`productId` obligatorio) |
+| **Prices** | `POST` | `/prices` | `reportPrice(dto)` | `201 Created` / `200 OK` / `400` / `401` / `404` | Reporta el precio de un producto en una tienda. `200` si ya existe el mismo producto, tienda y `scrapedAt`. Requiere `x-api-key` |
+| **Prices** | `POST` | `/prices/bulk` | `reportBulk(dtos)` | `201 Created` / `400` / `401` / `404` / `429` | Reporta precios en lote (hasta 1000), todo o nada ante IDs inexistentes. Responde `{ received, saved, duplicates }`. Requiere `x-api-key` |
 
 ### Ejemplo de body para `POST /stores`
 
@@ -234,6 +312,7 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 - `latitude` debe estar entre `-90` y `90`, y `longitude` entre `-180` y `180`.
 - `schedule` es opcional.
 - No se pueden repetir una `chain` y una `address` juntas. Si se intenta, la API responde `409 Conflict`.
+- La columna `location` (punto geográfico) la calcula PostgreSQL a partir de `latitude` y `longitude`; no se envía ni aparece en las respuestas.
 
 ### Autenticación del scraper (`x-api-key`)
 
@@ -254,18 +333,43 @@ curl -X POST http://localhost:3000/stores/bulk \
 # {"received":1,"created":1,"updated":0}
 ```
 
-`POST /prices/bulk` recibe hasta 1000 precios con la forma de `POST /prices`. Es todo o nada: si algún `productId` o `storeId` no existe, responde `404` con los IDs faltantes y no guarda ninguno.
+`POST /prices/bulk` recibe hasta 1000 precios con la forma de `POST /prices`. Es todo o nada: si algún `productId` o `storeId` no existe, responde `404` con los IDs en `missingProductIds` y `missingStoreIds`, y no guarda ninguno. Si todo existe, responde `201` con `{ received, saved, duplicates }`, donde `duplicates` son los reportes que ya existían (o que se repiten dentro del mismo lote) y no se guardaron.
 
 ```bash
 curl -X POST http://localhost:3000/prices/bulk \
   -H "x-api-key: cambia-esta-clave" -H "Content-Type: application/json" \
-  -d '{"prices":[{"productId":1,"storeId":1,"price":4500}]}'
-# {"received":1,"saved":1}
+  -d '{"prices":[{"productId":1,"storeId":1,"price":4500,"scrapedAt":"2026-11-10T15:30:00Z"}]}'
+# {"received":1,"saved":1,"duplicates":0}
 ```
+
+### Precios
+
+`POST /prices` reporta el precio de un producto en una tienda:
+
+```json
+{
+  "productId": 1,
+  "storeId": 1,
+  "price": 4500,
+  "currency": "cop",
+  "source": "scraper",
+  "scrapedAt": "2026-11-10T15:30:00Z"
+}
+```
+
+- `price` debe ser mayor a `0`.
+- `currency` es opcional (por defecto `COP`). Se normaliza a mayúsculas (`cop` se guarda como `COP`) y debe ser un código ISO 4217 válido.
+- `scrapedAt` es opcional y debe ser una fecha ISO 8601: la fecha en que se extrajo el precio. Si se omite, se usa la fecha actual.
+- Si ya existe un reporte con el mismo `productId`, `storeId` y `scrapedAt`, no se duplica: la API responde `200 OK` con el precio existente. Si es nuevo, responde `201 Created`. El mismo precio con otra fecha se guarda como historial.
+
+> **Recomendación para el scraper:** enviar siempre `scrapedAt` con la fecha real de extracción. Sin ese campo, cada reporte se guarda como nuevo aunque el precio no haya cambiado.
+
+- `GET /prices?productId=&storeId=` filtra por producto y/o tienda. Si alguno no es un entero positivo, responde `400`.
+- `GET /prices/latest?productId=` devuelve el precio más reciente del producto en cada tienda, con los datos de la tienda. Responde `400` si falta `productId` o no es válido, y `404` si el producto no existe.
 
 ### Tiendas cercanas
 
-`GET /stores/nearby?lat=&lng=&radiusKm=&chain=` calcula la distancia con la fórmula de Haversine en SQL (sin PostGIS).
+`GET /stores/nearby?lat=&lng=&radiusKm=&chain=` usa la columna `location` (tipo `geography` con índice GIST) de PostGIS: `ST_DWithin` filtra las tiendas dentro del radio y `ST_Distance` calcula la distancia.
 
 | Parámetro | Obligatorio | Descripción |
 | :--- | :--- | :--- |
@@ -288,6 +392,41 @@ Devuelve las tiendas con el campo extra `distanceKm`, ordenadas de la más cerca
 
 Con `forbidNonWhitelisted: true`, enviar una propiedad que el DTO no declara (en el cuerpo o en la query) devuelve `400 Bad Request` con el mensaje `property <nombre> should not exist`.
 
+### Límite de peticiones (429)
+
+Cada ruta permite `THROTTLE_LIMIT` peticiones por IP en cada ventana de `THROTTLE_TTL_MS` (por defecto 100 por minuto). Los endpoints de carga masiva (`POST /stores/bulk` y `POST /prices/bulk`) tienen además un límite más estricto, `THROTTLE_BULK_LIMIT` (por defecto 10 por minuto), con su propio contador por ruta. Al superarlo, la API responde:
+
+```json
+{
+  "statusCode": 429,
+  "error": "Too Many Requests",
+  "message": "Demasiadas peticiones, intenta de nuevo más tarde",
+  "path": "/stores/bulk",
+  "timestamp": "2026-11-10T15:30:00.000Z"
+}
+```
+
+- Las peticiones sin `x-api-key` también cuentan, porque el límite se evalúa antes de validar la clave.
+- El contador se guarda en memoria, así que se reinicia al reiniciar la API.
+
+### Formato de errores y logs
+
+Todos los errores responden con el mismo formato:
+
+```json
+{
+  "statusCode": 409,
+  "error": "Conflict",
+  "message": "Ya existe una tienda de la cadena Alkosto en la dirección Cra 27 # 18-30",
+  "path": "/stores",
+  "timestamp": "2026-11-10T15:30:00.000Z"
+}
+```
+
+- Los errores de validación (`400`) devuelven `message` como arreglo de textos.
+- Los errores de PostgreSQL se traducen: `23505` y `23503` responden `409`; `22P02`, `22003` y `23502` responden `400`. Cualquier otro error responde `500` con el mensaje genérico `Error interno del servidor`; el detalle queda en el log.
+- Cada petición deja una línea en el log con el contexto `[HTTP]`: método, ruta, código de estado y duración, por ejemplo `GET /stores 200 12ms`. Las respuestas `4xx` se registran como advertencia y las `5xx` como error.
+
 ---
 
 ## 6. Conceptos Clave Explicados
@@ -305,4 +444,4 @@ Con `forbidNonWhitelisted: true`, enviar una propiedad que el DTO no declara (en
 6. **Retorno Temprano (Early Return):**  
    Patrón de programación limpia donde los casos de error o condiciones no cumplidas se evalúan al inicio de la función para cortar la ejecución (`throw new NotFoundException(...)`), eliminando la necesidad de bloques `else` anidados.
 7. **Entidad (TypeORM):**  
-   Clase decorada con `@Entity` que representa una tabla de PostgreSQL. Sus columnas (`@Column`) definen la estructura de los datos guardados. La restricción única de `stores` (`chain` + `address`) evita tiendas duplicadas a nivel de base de datos.
+   Clase decorada con `@Entity` que representa una tabla de PostgreSQL. Sus columnas (`@Column`) definen la estructura de los datos guardados. La restricción única de `stores` (`chain` + `address`) evita tiendas duplicadas a nivel de base de datos, y la de `prices` (`productId` + `storeId` + `scrapedAt`) evita reportes de precio repetidos.

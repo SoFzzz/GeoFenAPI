@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b3e02914-f58c-4ad2-9be7-e54fa91c1012",
     "name": "GeoFen API REST - Pruebas y Ejemplos",
-    "description": "Colección de pruebas para GeoFen API. Incluye casos de éxito (200, 201), conflictos (409) y casos de validación y error (400, 404). Los datos se guardan en PostgreSQL. Las peticiones de escritura sobre tiendas y precios envían el header x-api-key con la variable de colección apiKey.",
+    "description": "Colección de pruebas para GeoFen API. Incluye casos de éxito (200, 201), conflictos (409), validación y error (400, 404) y límite de peticiones (429). Los datos se guardan en PostgreSQL. Las peticiones de escritura sobre tiendas y precios envían el header x-api-key con la variable de colección apiKey.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -921,7 +921,7 @@
               "port": "3000",
               "path": ["prices", "bulk"]
             },
-            "description": "Reporta varios precios en una sola petición (HTTP 201 con { received, saved }). Requiere que existan el producto 1 y las tiendas 1 y 2 (ajusta los IDs a los de tu base)."
+            "description": "Reporta varios precios en una sola petición (HTTP 201 con { received, saved, duplicates }). Requiere que existan el producto 1 y las tiendas 1 y 2 (ajusta los IDs a los de tu base)."
           },
           "response": []
         },
@@ -950,7 +950,7 @@
               "port": "3000",
               "path": ["prices", "bulk"]
             },
-            "description": "Si algún producto o tienda no existe responde HTTP 404 con los IDs faltantes y no guarda ningún precio del lote."
+            "description": "Si algún producto o tienda no existe responde HTTP 404 con missingProductIds y missingStoreIds; no se guarda ningún precio del lote."
           },
           "response": []
         },
@@ -976,6 +976,144 @@
               "path": ["prices"]
             },
             "description": "Sin el header x-api-key la API rechaza la petición con HTTP 401."
+          },
+          "response": []
+        },
+        {
+          "name": "7. GET - Precio más reciente por tienda (/prices/latest)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/prices/latest?productId=1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["prices", "latest"],
+              "query": [
+                {
+                  "key": "productId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Devuelve un precio por tienda: el más reciente del producto 1 en cada tienda (HTTP 200). Sin productId o con un valor no válido responde 400; si el producto no existe responde 404."
+          },
+          "response": []
+        },
+        {
+          "name": "8. POST - Reporte duplicado (200 OK)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 1,\n  \"storeId\": 1,\n  \"price\": 4500,\n  \"currency\": \"COP\",\n  \"source\": \"scraper\",\n  \"scrapedAt\": \"2026-11-10T15:30:00Z\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/prices",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["prices"]
+            },
+            "description": "Reporta un precio con scrapedAt fijo. La primera vez en la base responde 201 Created; al repetir la misma petición (mismo producto, tienda y scrapedAt) responde 200 OK con el precio existente y no crea un registro nuevo."
+          },
+          "response": []
+        },
+        {
+          "name": "9. POST - Carga masiva con duplicados",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prices\": [\n    {\n      \"productId\": 1,\n      \"storeId\": 1,\n      \"price\": 4500,\n      \"currency\": \"COP\",\n      \"source\": \"scraper\",\n      \"scrapedAt\": \"2026-11-10T15:30:00Z\"\n    },\n    {\n      \"productId\": 1,\n      \"storeId\": 2,\n      \"price\": 4300,\n      \"scrapedAt\": \"2026-11-11T09:00:00Z\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/prices/bulk",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["prices", "bulk"]
+            },
+            "description": "Mezcla un reporte que ya existe (el de la petición 8) con uno nuevo. Si se ejecuta después de la 8, responde 201 con { received: 2, saved: 1, duplicates: 1 }. La segunda ejecución responde saved: 0 y duplicates: 2."
+          },
+          "response": []
+        },
+        {
+          "name": "10. POST - Moneda en minúscula (se normaliza a COP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": 1,\n  \"storeId\": 2,\n  \"price\": 4300,\n  \"currency\": \"cop\",\n  \"source\": \"manual\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/prices",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["prices"]
+            },
+            "description": "Envía la moneda en minúscula. La API la normaliza a mayúsculas: la respuesta (HTTP 201) trae currency \"COP\"."
+          },
+          "response": []
+        },
+        {
+          "name": "11. POST - Error 429 límite de carga masiva",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-api-key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prices\": [\n    {\n      \"productId\": 1,\n      \"storeId\": 1,\n      \"price\": 4500\n    },\n    {\n      \"productId\": 1,\n      \"storeId\": 2,\n      \"price\": 4200,\n      \"currency\": \"COP\",\n      \"source\": \"manual\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/prices/bulk",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["prices", "bulk"]
+            },
+            "description": "Provoca el límite de carga masiva: ejecuta esta petición 11 veces seguidas en menos de un minuto (con el Collection Runner de Postman, 11 iteraciones). El límite por defecto es THROTTLE_BULK_LIMIT=10 por ventana de THROTTLE_TTL_MS=60000. Cada ruta de carga masiva tiene su propio contador y cuenta también las peticiones sin API key o con datos inválidos. Al superarlo responde HTTP 429 con { statusCode: 429, error: \"Too Many Requests\", message: \"Demasiadas peticiones, intenta de nuevo más tarde\" }. Espera un minuto antes de volver a probar."
           },
           "response": []
         }

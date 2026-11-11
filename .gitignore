@@ -13,3 +13,6 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Reportes de cobertura de pruebas
+/coverage
