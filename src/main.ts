@@ -39,7 +39,10 @@ async function bootstrap() {
     )
     .setVersion('1.0')
     .addTag('lists', 'Operaciones CRUD para listas de compras')
-    .addTag('stores', 'Consulta de tiendas comerciales de referencia')
+    .addTag('stores', 'Gestión de tiendas comerciales')
+    .addTag('categories', 'Gestión de categorías de productos')
+    .addTag('products', 'Catálogo de productos con marca y categoría')
+    .addTag('prices', 'Reporte y consulta de precios de productos por tienda')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -87,10 +87,36 @@ geofen-api/
 │   │   ├── stores.controller.ts    # Enrutamiento HTTP
 │   │   ├── stores.module.ts        # Encapsulamiento del módulo
 │   │   └── stores.service.ts       # Lógica de negocio y acceso a PostgreSQL
+│   ├── categories/                 # Módulo de Categorías (CRUD)
+│   │   ├── dto/
+│   │   │   ├── create-category.dto.ts
+│   │   │   └── update-category.dto.ts
+│   │   ├── entities/
+│   │   │   └── category.entity.ts  # Entidad TypeORM (tabla categories, name único)
+│   │   ├── categories.controller.ts
+│   │   ├── categories.module.ts
+│   │   └── categories.service.ts
+│   ├── products/                   # Módulo de Productos (CRUD y relación con Category)
+│   │   ├── dto/
+│   │   │   ├── create-product.dto.ts
+│   │   │   └── update-product.dto.ts
+│   │   ├── entities/
+│   │   │   └── product.entity.ts   # Entidad TypeORM (tabla products, ManyToOne Category)
+│   │   ├── products.controller.ts
+│   │   ├── products.module.ts
+│   │   └── products.service.ts
+│   ├── prices/                     # Módulo de Precios (reporte y consulta)
+│   │   ├── dto/
+│   │   │   └── report-price.dto.ts # Validación de reporte de precio
+│   │   ├── entities/
+│   │   │   └── price.entity.ts     # Entidad TypeORM (tabla prices, ManyToOne Product y Store)
+│   │   ├── prices.controller.ts
+│   │   ├── prices.module.ts
+│   │   └── prices.service.ts
 │   ├── common/
 │   │   └── transformers/
 │   │       └── decimal.transformer.ts # Convierte decimales de PostgreSQL a number
-│   ├── app.module.ts               # Módulo raíz que conecta Listas, Tiendas y TypeORM
+│   ├── app.module.ts               # Módulo raíz que conecta Listas, Tiendas, Categorías, Productos, Precios y TypeORM
 │   └── main.ts                     # Bootstrap, ValidationPipe y Swagger en /api
 ├── .env.example                    # Variables de entorno de ejemplo
 ├── docker-compose.yml              # PostgreSQL y pgAdmin
@@ -169,6 +195,18 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 | **Stores** | `POST` | `/stores` | `create(dto)` | `201 Created` / `400` / `409` | Crea una tienda. `409` si ya existe la misma cadena y dirección |
 | **Stores** | `PATCH` | `/stores/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de una tienda |
 | **Stores** | `DELETE` | `/stores/:id` | `remove(id)` | `200 OK` / `404` | Elimina una tienda por ID |
+| **Categories** | `GET` | `/categories` | `findAll()` | `200 OK` | Retorna todas las categorías |
+| **Categories** | `GET` | `/categories/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de una categoría por ID |
+| **Categories** | `POST` | `/categories` | `create(dto)` | `201 Created` / `400` / `409` | Crea una categoría (nombre único) |
+| **Categories** | `PATCH` | `/categories/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de categoría |
+| **Categories** | `DELETE` | `/categories/:id` | `remove(id)` | `200 OK` / `404` | Elimina una categoría por ID |
+| **Products** | `GET` | `/products` | `findAll(categoryId?)` | `200 OK` / `404` | Catálogo de productos (filtro opcional por `categoryId`) |
+| **Products** | `GET` | `/products/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de un producto por ID |
+| **Products** | `POST` | `/products` | `create(dto)` | `201 Created` / `400` / `404` / `409` | Registra un producto (barcode único, categoría opcional) |
+| **Products** | `PATCH` | `/products/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de un producto |
+| **Products** | `DELETE` | `/products/:id` | `remove(id)` | `200 OK` / `404` | Elimina un producto por ID |
+| **Prices** | `GET` | `/prices` | `findAll(productId?, storeId?)` | `200 OK` | Consulta precios con filtros opcionales por producto y tienda |
+| **Prices** | `POST` | `/prices` | `reportPrice(dto)` | `201 Created` / `400` / `404` | Reporta precio de un producto en una tienda |
 
 ### Ejemplo de body para `POST /stores`
 
