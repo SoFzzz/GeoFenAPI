@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiKeyGuard } from '../auth/api-key.guard';
 import { StoresService } from './stores.service';
+import { BulkStoresDto } from './dto/bulk-stores.dto';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 import { Store } from './entities/store.entity';
@@ -72,6 +73,18 @@ export class StoresController {
   @ApiResponse({ status: 409, description: 'Ya existe una tienda con la misma cadena y dirección.' })
   async create(@Body() createStoreDto: CreateStoreDto): Promise<Store> {
     return this.storesService.create(createStoreDto);
+  }
+
+  @Post('bulk')
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Crear o actualizar tiendas en lote (upsert por cadena y dirección)' })
+  @ApiResponse({ status: 200, description: 'Lote procesado: cantidad recibida, creadas y actualizadas.' })
+  @ApiResponse({ status: 400, description: 'Alguna tienda es inválida o el lote supera 500 elementos.' })
+  @ApiResponse({ status: 401, description: 'API key inválida o ausente.' })
+  async bulkUpsert(@Body() dto: BulkStoresDto) {
+    return this.storesService.bulkUpsert(dto.stores);
   }
 
   /**
