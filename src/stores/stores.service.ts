@@ -96,6 +96,10 @@ export class StoresService {
     return this.withoutLocation(await this.storeRepository.save(store));
   }
 
+  /**
+   * Crea o actualiza tiendas en lote usando (cadena, dirección) como clave.
+   * Si el lote repite una clave se conserva la última. Retorna recibidas, creadas y actualizadas.
+   */
   async bulkUpsert(dtos: CreateStoreDto[]) {
     const byKey = new Map(dtos.map((dto) => [`${dto.chain}|${dto.address}`, dto]));
     const unique = [...byKey.values()];

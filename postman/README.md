@@ -22,7 +22,7 @@ El proyecto se encuentra en su fase base arquitectónica (MVP didáctico), compl
    - `PATCH /stores/:id` actualiza solo los campos enviados. Si no existe la tienda responde `404`, y si el cambio duplica una combinación `chain` + `address` responde `409`.
 
 3. **Ingesta del scraper y seguridad:**
-   - Los endpoints de escritura de tiendas y precios (`POST`, `PATCH` y `DELETE` de `/stores`, `POST /stores/bulk`, `POST /prices` y `POST /prices/bulk`) exigen el header `x-api-key`, que debe coincidir con `SCRAPER_API_KEY` del `.env`. Sin él responden `401`.
+   - Los endpoints de escritura de tiendas, precios, categorías y productos (`POST`, `PATCH` y `DELETE` de `/stores`, `/categories` y `/products`, `POST /stores/bulk`, `POST /prices` y `POST /prices/bulk`) exigen el header `x-api-key`, que debe coincidir con `SCRAPER_API_KEY` del `.env`. Sin él responden `401`.
    - `POST /stores/bulk` carga hasta 500 tiendas con upsert por `chain` + `address` y responde `{ received, created, updated }`.
    - `POST /prices/bulk` carga hasta 1000 precios, todo o nada: si algún producto o tienda no existe responde `404` (con `missingProductIds` y `missingStoreIds`) y no guarda nada. Si todo existe responde `{ received, saved, duplicates }`.
    - `POST /prices` con el mismo producto, tienda y `scrapedAt` que un precio existente responde `200` con el existente en lugar de `201`. `GET /prices/latest?productId=` devuelve el precio más reciente por tienda.
@@ -47,7 +47,7 @@ El proyecto se encuentra en su fase base arquitectónica (MVP didáctico), compl
    npm run start:dev
    ```
 6. En Postman, encontrarás la carpeta **GeoFen API REST - Pruebas y Ejemplos** con todas las peticiones organizadas.
-7. La colección define la variable `apiKey`. Debe tener el mismo valor que `SCRAPER_API_KEY` en tu `.env`; si no coincide, las peticiones de escritura sobre tiendas y precios responden 401.
+7. La colección define la variable `apiKey`. Debe tener el mismo valor que `SCRAPER_API_KEY` en tu `.env`; si no coincide, las peticiones de escritura sobre tiendas, precios, categorías y productos responden 401.
 
 ---
 
@@ -91,6 +91,8 @@ Las peticiones de escritura de esta carpeta envían `x-api-key: {{apiKey}}`. Las
 
 ### C. Categorías (`/categories`)
 
+Las peticiones de escritura (`POST`, `PATCH` y `DELETE`) envían `x-api-key: {{apiKey}}`; sin el header responden `401`.
+
 - **GET Todas:** `GET http://localhost:3000/categories` -> Espera `200 OK`.
 - **POST Éxito:** `POST http://localhost:3000/categories` con `{"name": "Granos y cereales"}` -> Espera `201 Created`.
 - **POST Error 409 (Duplicado):** Enviar misma categoría -> Espera `409 Conflict`.
@@ -99,6 +101,8 @@ Las peticiones de escritura de esta carpeta envían `x-api-key: {{apiKey}}`. Las
 - **DELETE Eliminar:** `DELETE http://localhost:3000/categories/1` -> Espera `200 OK`.
 
 ### D. Productos (`/products`)
+
+Las peticiones de escritura (`POST`, `PATCH` y `DELETE`) envían `x-api-key: {{apiKey}}`; sin el header responden `401`.
 
 - **GET Todos:** `GET http://localhost:3000/products` -> Espera `200 OK`.
 - **POST Éxito:** `POST http://localhost:3000/products` con `{"name": "Arroz Diana 1kg", "brand": "Diana", "barcode": "7702354012345", "categoryId": 1}` -> Espera `201 Created`.

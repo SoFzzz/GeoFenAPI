@@ -8,10 +8,18 @@ import { ConfigService } from '@nestjs/config';
 import { timingSafeEqual } from 'crypto';
 import { Request } from 'express';
 
+/**
+ * ApiKeyGuard: protege los endpoints de escritura. Compara el header x-api-key
+ * con SCRAPER_API_KEY del .env y responde 401 si falta o no coincide.
+ */
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
   constructor(private readonly config: ConfigService) {}
 
+  /**
+   * Permite la petición solo con la clave correcta. Si SCRAPER_API_KEY no está
+   * definida, rechaza todo (falla cerrado).
+   */
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
     const expected = this.config.get<string>('SCRAPER_API_KEY');
@@ -24,6 +32,7 @@ export class ApiKeyGuard implements CanActivate {
     return true;
   }
 
+  /** Compara las claves en tiempo constante. */
   private isSameKey(received: string, expected: string): boolean {
     const a = Buffer.from(received);
     const b = Buffer.from(expected);

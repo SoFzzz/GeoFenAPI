@@ -76,6 +76,10 @@ export class PricesController {
     return this.pricesService.findLatestByProduct(query.productId);
   }
 
+  /**
+   * POST /prices/bulk
+   * Carga masiva de precios; exige x-api-key y tiene límite de peticiones propio.
+   */
   @Post('bulk')
   @UseGuards(ApiKeyGuard)
   @BulkThrottle()

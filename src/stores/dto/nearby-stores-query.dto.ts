@@ -2,6 +2,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
+/**
+ * NearbyStoresQueryDto: punto (lat, lng), radio en km y cadena opcional para GET /stores/nearby.
+ */
 export class NearbyStoresQueryDto {
   @ApiProperty({ example: 1.2136, description: 'Latitud del punto de búsqueda' })
   @Type(() => Number)

@@ -10,13 +10,16 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiOperation,
   ApiParam,
   ApiResponse,
+  ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { ApiKeyGuard } from '../auth/api-key.guard';
 import { ProductsService } from './products.service';
 import { ProductsQueryDto } from './dto/products-query.dto';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -60,10 +63,13 @@ export class ProductsController {
    * POST /products
    */
   @Post()
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Registrar un nuevo producto' })
   @ApiResponse({ status: 201, description: 'Producto registrado exitosamente.' })
   @ApiResponse({ status: 400, description: 'Datos de validación inválidos.' })
+  @ApiResponse({ status: 401, description: 'API key inválida o ausente.' })
   @ApiResponse({ status: 404, description: 'Categoría especificada no encontrada.' })
   @ApiResponse({ status: 409, description: 'Código de barras duplicado.' })
   async create(@Body() createProductDto: CreateProductDto): Promise<Product> {
@@ -74,10 +80,13 @@ export class ProductsController {
    * PATCH /products/:id
    */
   @Patch(':id')
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @ApiOperation({ summary: 'Actualizar parcialmente un producto' })
   @ApiParam({ name: 'id', description: 'ID numérico del producto a actualizar', example: 1 })
   @ApiResponse({ status: 200, description: 'Producto actualizado exitosamente.' })
   @ApiResponse({ status: 400, description: 'Datos de validación o ID inválidos.' })
+  @ApiResponse({ status: 401, description: 'API key inválida o ausente.' })
   @ApiResponse({ status: 404, description: 'Producto o categoría no encontrados.' })
   @ApiResponse({ status: 409, description: 'Código de barras en conflicto con otro producto.' })
   async update(
@@ -91,10 +100,13 @@ export class ProductsController {
    * DELETE /products/:id
    */
   @Delete(':id')
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @ApiOperation({ summary: 'Eliminar un producto por ID' })
   @ApiParam({ name: 'id', description: 'ID numérico del producto a eliminar', example: 1 })
   @ApiResponse({ status: 200, description: 'Producto eliminado exitosamente.' })
   @ApiResponse({ status: 400, description: 'ID no numérico.' })
+  @ApiResponse({ status: 401, description: 'API key inválida o ausente.' })
   @ApiResponse({ status: 404, description: 'Producto no encontrado.' })
   async remove(
     @Param('id', ParseIntPipe) id: number,
