@@ -146,6 +146,11 @@ geofen-api/
 │   ├── typeorm-shim.ts             # Sustituto de @nestjs/typeorm para Jest (CommonJS)
 │   ├── jest-e2e.json               # Configuración de Jest para npm run test:e2e
 │   └── prices.e2e-spec.ts          # Pruebas HTTP de /prices (sin base de datos)
+├── scraper/                        # Programa aparte que envía precios a la API (ver scraper/README.md)
+│   ├── data/                       # Catálogo, tiendas y precios de ejemplo
+│   ├── src/                        # Fuentes de precios, sincronización y envío en lotes
+│   ├── .env.example                # Variables del scraper (SCRAPER_API_KEY, API_URL, DRY_RUN...)
+│   └── README.md                   # Guía del scraper
 ├── geofen-collection.json          # Colección de Postman (local, no se versiona)
 ├── .env.example                    # Variables de entorno de ejemplo
 ├── docker-compose.yml              # PostgreSQL (PostGIS) y pgAdmin
@@ -445,3 +450,11 @@ Todos los errores responden con el mismo formato:
    Patrón de programación limpia donde los casos de error o condiciones no cumplidas se evalúan al inicio de la función para cortar la ejecución (`throw new NotFoundException(...)`), eliminando la necesidad de bloques `else` anidados.
 7. **Entidad (TypeORM):**  
    Clase decorada con `@Entity` que representa una tabla de PostgreSQL. Sus columnas (`@Column`) definen la estructura de los datos guardados. La restricción única de `stores` (`chain` + `address`) evita tiendas duplicadas a nivel de base de datos, y la de `prices` (`productId` + `storeId` + `scrapedAt`) evita reportes de precio repetidos.
+
+---
+
+## 7. Scraper de Precios
+
+La carpeta `scraper/` contiene un programa aparte que obtiene precios de supermercados de Pasto y los envía a la API con `POST /prices/bulk`. Tiene su propio `package.json` y su `.env`, y no forma parte de la aplicación NestJS.
+
+Hoy consulta la fuente `olimpica` (catálogo público en línea) y la fuente `file`, que usa precios de **ejemplo** cargados a mano. Para instalarlo, configurarlo y ejecutarlo, revisa [`scraper/README.md`](scraper/README.md).
