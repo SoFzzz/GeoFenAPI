@@ -8,6 +8,8 @@ export interface Config {
   dryRun: boolean;
   requestDelayMs: number;
   sources: string[];
+  /** Máximo de productos que consultan las fuentes web (flag --limit=N, para pruebas) */
+  limit?: number;
 }
 
 /** Interpreta un texto como booleano ("true", "1", "yes"). */
@@ -30,19 +32,25 @@ function parseList(value: string): string[] {
 
 /**
  * Carga la configuración desde el .env y los flags de la línea de comandos
- * (`--dry-run`, `--source=file,exito`). Los flags tienen prioridad.
+ * (`--dry-run`, `--source=file,olimpica`, `--limit=N`). Los flags tienen prioridad.
  */
 export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
   const env = process.env;
 
   let dryRun = parseBool(env.DRY_RUN, true);
   let sourcesRaw = env.SOURCES ?? 'file';
+  let limit: number | undefined;
 
   for (const arg of argv) {
     if (arg === '--dry-run') dryRun = true;
     else if (arg.startsWith('--source=')) sourcesRaw = arg.slice('--source='.length);
     else if (arg.startsWith('--sources=')) sourcesRaw = arg.slice('--sources='.length);
-    else throw new Error(`Argumento desconocido: ${arg}`);
+    else if (arg.startsWith('--limit=')) {
+      limit = Number(arg.slice('--limit='.length));
+      if (!Number.isInteger(limit) || limit < 1) {
+        throw new Error('--limit debe ser un entero mayor o igual a 1.');
+      }
+    } else throw new Error(`Argumento desconocido: ${arg}`);
   }
 
   const apiKey = env.SCRAPER_API_KEY?.trim() ?? '';
@@ -69,5 +77,6 @@ export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
     dryRun,
     requestDelayMs: delay,
     sources,
+    limit,
   };
 }
