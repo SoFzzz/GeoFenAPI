@@ -24,8 +24,10 @@ El proyecto se encuentra en su fase base arquitectónica (MVP didáctico), compl
 3. **Ingesta del scraper y seguridad:**
    - Los endpoints de escritura de tiendas y precios (`POST`, `PATCH` y `DELETE` de `/stores`, `POST /stores/bulk`, `POST /prices` y `POST /prices/bulk`) exigen el header `x-api-key`, que debe coincidir con `SCRAPER_API_KEY` del `.env`. Sin él responden `401`.
    - `POST /stores/bulk` carga hasta 500 tiendas con upsert por `chain` + `address` y responde `{ received, created, updated }`.
-   - `POST /prices/bulk` carga hasta 1000 precios, todo o nada: si algún producto o tienda no existe responde `404` y no guarda nada.
-   - `GET /stores/nearby` devuelve las tiendas dentro de un radio, ordenadas por distancia (`distanceKm`), con filtro opcional por cadena.
+   - `POST /prices/bulk` carga hasta 1000 precios, todo o nada: si algún producto o tienda no existe responde `404` (con `missingProductIds` y `missingStoreIds`) y no guarda nada. Si todo existe responde `{ received, saved, duplicates }`.
+   - `POST /prices` con el mismo producto, tienda y `scrapedAt` que un precio existente responde `200` con el existente en lugar de `201`. `GET /prices/latest?productId=` devuelve el precio más reciente por tienda.
+   - `GET /stores/nearby` devuelve las tiendas dentro de un radio (`ST_DWithin` sobre PostGIS), ordenadas por distancia (`distanceKm`), con filtro opcional por cadena.
+   - Los endpoints de carga masiva (`POST /stores/bulk` y `POST /prices/bulk`) tienen un límite de peticiones por IP: al superarlo responden `429 Too Many Requests` (ver la petición de ejemplo en la carpeta de Precios).
    - `GET /stores`, `/lists` y `/products` están paginados (`page`, `limit`) y responden `{ data, total, page, limit }`.
    - Enviar una propiedad no declarada en el DTO (cuerpo o query) responde `400`.
 
@@ -39,13 +41,13 @@ El proyecto se encuentra en su fase base arquitectónica (MVP didáctico), compl
 1. Antes de empezar, levanta la base de datos con Docker y arranca el servidor. Los pasos están en el README principal del proyecto.
 2. Abre **Postman**.
 3. Haz clic en el botón **Import** (esquina superior izquierda).
-4. Selecciona o arrastra el archivo `geofen-collection.json` de esta carpeta.
+4. Selecciona o arrastra el archivo `geofen-collection.json`. La colección se comparte dentro del equipo y se guarda en la raíz del proyecto, junto al `.env` (está en `.gitignore` porque lleva la API key).
 5. Asegúrate de tener el servidor corriendo con:
    ```bash
    npm run start:dev
    ```
 6. En Postman, encontrarás la carpeta **GeoFen API REST - Pruebas y Ejemplos** con todas las peticiones organizadas.
-7. La colección define la variable `apiKey` (por defecto `cambia-esta-clave`). Si cambiaste `SCRAPER_API_KEY` en tu `.env`, actualiza el valor en la pestaña **Variables** de la colección.
+7. La colección define la variable `apiKey`. Debe tener el mismo valor que `SCRAPER_API_KEY` en tu `.env`; si no coincide, las peticiones de escritura sobre tiendas y precios responden 401.
 
 ---
 
@@ -111,6 +113,11 @@ Las peticiones de escritura de esta carpeta envían `x-api-key: {{apiKey}}`. Las
 - **GET Todos los Precios:** `GET http://localhost:3000/prices` -> Espera `200 OK` ordenados por fecha descendente.
 - **GET Precios por Producto:** `GET http://localhost:3000/prices?productId=1` -> Espera `200 OK` con el historial de precios del producto.
 - **GET Precios por Tienda:** `GET http://localhost:3000/prices?storeId=1` -> Espera `200 OK`.
-- **POST Carga masiva:** `POST http://localhost:3000/prices/bulk` con `{"prices": [...]}` y `x-api-key` -> Espera `201 Created` con `{ received, saved }`. Ajusta los IDs de producto y tienda a los que existan en tu base.
-- **POST Error 404 (lote):** un precio con producto o tienda inexistente -> Espera `404 Not Found` con los IDs faltantes; no se guarda ningún precio del lote.
+- **POST Carga masiva:** `POST http://localhost:3000/prices/bulk` con `{"prices": [...]}` y `x-api-key` -> Espera `201 Created` con `{ received, saved, duplicates }`. Ajusta los IDs de producto y tienda a los que existan en tu base.
+- **POST Error 404 (lote):** un precio con producto o tienda inexistente -> Espera `404 Not Found` con `missingProductIds` y `missingStoreIds`; no se guarda ningún precio del lote.
 - **POST Error 401:** `POST http://localhost:3000/prices` sin `x-api-key` -> Espera `401 Unauthorized`.
+- **GET Precio más reciente por tienda:** `GET http://localhost:3000/prices/latest?productId=1` -> Espera `200 OK` con un precio por tienda (el más reciente de cada una). Sin `productId` o con un valor no válido responde `400`.
+- **POST Reporte duplicado:** `POST http://localhost:3000/prices` con `scrapedAt` fijo (`2026-11-10T15:30:00Z`). La primera vez responde `201 Created`; al repetirla (mismo producto, tienda y `scrapedAt`) espera `200 OK` con el precio existente, sin crear otro registro.
+- **POST Carga masiva con duplicados:** `POST http://localhost:3000/prices/bulk` con un precio ya reportado y uno nuevo -> Espera `201 Created` con `{ received: 2, saved: 1, duplicates: 1 }` si se ejecuta después del reporte duplicado. En la siguiente ejecución espera `saved: 0` y `duplicates: 2`.
+- **POST Moneda en minúscula:** `POST http://localhost:3000/prices` con `"currency": "cop"` -> Espera `201 Created` y `currency: "COP"` en la respuesta, porque la API normaliza la moneda a mayúsculas.
+- **POST Error 429 (límite de carga masiva):** `POST http://localhost:3000/prices/bulk` con la misma carga de la petición de carga masiva. Para provocarlo, ejecuta la petición 11 veces seguidas en menos de un minuto (por ejemplo, con el **Collection Runner** de Postman y 11 iteraciones). Las peticiones cuentan aunque den `401` o `400`. Al superar `THROTTLE_BULK_LIMIT` (10 por defecto) en la ventana de `THROTTLE_TTL_MS` (60 000 ms) espera `429 Too Many Requests` con el mensaje `Demasiadas peticiones, intenta de nuevo más tarde`. Espera un minuto antes de volver a probar.

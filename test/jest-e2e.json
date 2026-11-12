@@ -1,0 +1,13 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testRegex": "test/.*\\.e2e-spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@nestjs/typeorm$": "<rootDir>/test/typeorm-shim.ts",
+    "^@nestjs/config$": "<rootDir>/test/config-shim.ts"
+  }
+}

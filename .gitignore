@@ -13,3 +13,9 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Reportes de cobertura de pruebas
+/coverage
+
+# Colección de Postman local (contiene la API key del equipo)
+/geofen-collection.json

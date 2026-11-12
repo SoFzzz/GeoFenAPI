@@ -35,14 +35,20 @@ export class StoresService {
     return paginated(data, total, query);
   }
 
+  /**
+   * Busca tiendas dentro de un radio en kilómetros alrededor de un punto.
+   * Usa ST_DWithin sobre la columna geography indexada (GIST) y ST_Distance
+   * para calcular la distancia; el resultado va ordenado de la más cercana a la más lejana.
+   */
   async findNearby({ lat, lng, radiusKm, chain }: NearbyStoresQueryDto) {
-    const distance = `6371 * acos(LEAST(1, cos(radians(:lat)) * cos(radians(store.latitude)) * cos(radians(store.longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(store.latitude))))`;
+    const point =
+      'ST_SetSRID(ST_MakePoint(CAST(:lng AS double precision), CAST(:lat AS double precision)), 4326)::geography';
 
     const query = this.storeRepository
       .createQueryBuilder('store')
-      .addSelect(distance, 'distance')
-      .where(`${distance} <= :radiusKm`)
-      .setParameters({ lat, lng, radiusKm })
+      .addSelect(`ST_Distance(store.location, ${point})`, 'distance')
+      .where(`ST_DWithin(store.location, ${point}, :radiusMeters)`)
+      .setParameters({ lat, lng, radiusMeters: radiusKm * 1000 })
       .orderBy('distance', 'ASC');
 
     if (chain) {
@@ -53,7 +59,7 @@ export class StoresService {
 
     return entities.map((store, index) => ({
       ...store,
-      distanceKm: Math.round(Number(raw[index].distance) * 100) / 100,
+      distanceKm: Math.round((Number(raw[index].distance) / 1000) * 100) / 100,
     }));
   }
 
@@ -87,7 +93,7 @@ export class StoresService {
     }
 
     const store = this.storeRepository.create(dto);
-    return this.storeRepository.save(store);
+    return this.withoutLocation(await this.storeRepository.save(store));
   }
 
   async bulkUpsert(dtos: CreateStoreDto[]) {
@@ -125,7 +131,15 @@ export class StoresService {
       );
     }
 
-    return this.storeRepository.save(store);
+    return this.withoutLocation(await this.storeRepository.save(store));
+  }
+
+  /**
+   * Quita la columna location de la respuesta (llega como binario).
+   */
+  private withoutLocation(store: Store): Store {
+    delete store.location;
+    return store;
   }
 
   /**
