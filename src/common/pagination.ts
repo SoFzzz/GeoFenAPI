@@ -2,6 +2,9 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
+/**
+ * PaginationQueryDto: parámetros page y limit (máximo 100) para los listados.
+ */
 export class PaginationQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
@@ -19,6 +22,7 @@ export class PaginationQueryDto {
   limit: number = 20;
 }
 
+/** Respuesta paginada: elementos de la página, total y parámetros usados. */
 export interface Paginated<T> {
   data: T[];
   total: number;
@@ -26,6 +30,7 @@ export interface Paginated<T> {
   limit: number;
 }
 
+/** Arma la respuesta paginada a partir de los datos y el total. */
 export function paginated<T>(
   data: T[],
   total: number,
@@ -34,6 +39,7 @@ export function paginated<T>(
   return { data, total, page, limit };
 }
 
+/** Convierte page y limit en skip y take para TypeORM. */
 export function pageOptions({ page, limit }: PaginationQueryDto) {
   return { skip: (page - 1) * limit, take: limit };
 }

@@ -8,6 +8,9 @@ import {
 } from 'class-validator';
 import { CreateStoreDto } from './create-store.dto';
 
+/**
+ * BulkStoresDto: lote de tiendas para POST /stores/bulk (de 1 a 500 elementos).
+ */
 export class BulkStoresDto {
   @ApiProperty({ type: [CreateStoreDto], maxItems: 500 })
   @IsArray({ message: 'stores debe ser un arreglo' })

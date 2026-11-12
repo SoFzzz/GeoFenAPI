@@ -49,6 +49,10 @@ export class StoresController {
     return this.storesService.findAll(query);
   }
 
+  /**
+   * GET /stores/nearby?lat=&lng=&radiusKm=&chain=
+   * Va antes de las rutas con parámetro.
+   */
   @Get('nearby')
   @ApiOperation({ summary: 'Buscar tiendas cercanas a una ubicación' })
   @ApiResponse({ status: 200, description: 'Tiendas dentro del radio, de la más cercana a la más lejana.' })
@@ -87,6 +91,10 @@ export class StoresController {
     return this.storesService.create(createStoreDto);
   }
 
+  /**
+   * POST /stores/bulk
+   * Carga masiva con upsert; exige x-api-key y tiene límite de peticiones propio.
+   */
   @Post('bulk')
   @UseGuards(ApiKeyGuard)
   @BulkThrottle()
