@@ -41,13 +41,13 @@ El proyecto se encuentra en su fase base arquitectónica (MVP didáctico), compl
 1. Antes de empezar, levanta la base de datos con Docker y arranca el servidor. Los pasos están en el README principal del proyecto.
 2. Abre **Postman**.
 3. Haz clic en el botón **Import** (esquina superior izquierda).
-4. Selecciona o arrastra el archivo `geofen-collection.json` de esta carpeta.
+4. Selecciona o arrastra el archivo `geofen-collection.json`. La colección se comparte dentro del equipo y se guarda en la raíz del proyecto, junto al `.env` (está en `.gitignore` porque lleva la API key).
 5. Asegúrate de tener el servidor corriendo con:
    ```bash
    npm run start:dev
    ```
 6. En Postman, encontrarás la carpeta **GeoFen API REST - Pruebas y Ejemplos** con todas las peticiones organizadas.
-7. La colección define la variable `apiKey` (por defecto `cambia-esta-clave`). Si cambiaste `SCRAPER_API_KEY` en tu `.env`, actualiza el valor en la pestaña **Variables** de la colección.
+7. La colección define la variable `apiKey`. Debe tener el mismo valor que `SCRAPER_API_KEY` en tu `.env`; si no coincide, las peticiones de escritura sobre tiendas y precios responden 401.
 
 ---
 

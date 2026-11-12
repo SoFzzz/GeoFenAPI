@@ -69,7 +69,6 @@ geofen-api/
 ├── docs/
 │   └── diagrama-geofen.png         # Diagrama de arquitectura del sistema
 ├── postman/
-│   ├── geofen-collection.json      # Colección interactiva de pruebas
 │   └── README.md                   # Guía de ejecución en Postman
 ├── src/
 │   ├── lists/                      # Módulo de Listas de Compras (CRUD)
@@ -147,6 +146,7 @@ geofen-api/
 │   ├── typeorm-shim.ts             # Sustituto de @nestjs/typeorm para Jest (CommonJS)
 │   ├── jest-e2e.json               # Configuración de Jest para npm run test:e2e
 │   └── prices.e2e-spec.ts          # Pruebas HTTP de /prices (sin base de datos)
+├── geofen-collection.json          # Colección de Postman (local, no se versiona)
 ├── .env.example                    # Variables de entorno de ejemplo
 ├── docker-compose.yml              # PostgreSQL (PostGIS) y pgAdmin
 ├── jest.config.ts                  # Configuración de Jest para npm test
