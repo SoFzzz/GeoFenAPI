@@ -1,0 +1,137 @@
+{
+  "nota": "Precios de ejemplo cargados a mano para la demo",
+  "source": "manual",
+  "currency": "COP",
+  "prices": [
+    {
+      "chain": "Éxito",
+      "barcode": "7702511000021",
+      "price": 4390
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7702028931313",
+      "price": 14500
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7701018076416",
+      "price": 13400
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7702059402028",
+      "price": 5100
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7702129003650",
+      "price": 5990
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7700624102038",
+      "price": 20500
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7702032120338",
+      "price": 8490
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7702032117833",
+      "price": 25900
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7702084137520",
+      "price": 4850
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7703812101202",
+      "price": 2690
+    },
+    {
+      "chain": "Éxito",
+      "barcode": "7702367002620",
+      "price": 8200
+    },
+    {
+      "chain": "Alkosto",
+      "barcode": "7702511000021",
+      "price": 4050
+    },
+    {
+      "chain": "Alkosto",
+      "barcode": "7702028931313",
+      "price": 13600
+    },
+    {
+      "chain": "Alkosto",
+      "barcode": "7702059402028",
+      "price": 4750
+    },
+    {
+      "chain": "Alkosto",
+      "barcode": "7702129003650",
+      "price": 5600
+    },
+    {
+      "chain": "Alkosto",
+      "barcode": "7702032117833",
+      "price": 24100
+    },
+    {
+      "chain": "Alkosto",
+      "barcode": "7702367002620",
+      "price": 7650
+    },
+    {
+      "chain": "Alkosto",
+      "barcode": "7702084137520",
+      "price": 4500
+    },
+    {
+      "chain": "Amorel",
+      "barcode": "7702511000021",
+      "price": 4500
+    },
+    {
+      "chain": "Amorel",
+      "barcode": "7702059402028",
+      "price": 5200
+    },
+    {
+      "chain": "Amorel",
+      "barcode": "7700624102038",
+      "price": 21500
+    },
+    {
+      "chain": "Amorel",
+      "barcode": "7703812101202",
+      "price": 2800
+    },
+    {
+      "chain": "Amorel",
+      "barcode": "7707192730021",
+      "price": 3900
+    },
+    {
+      "chain": "Amorel",
+      "barcode": "7702084137520",
+      "price": 5000
+    },
+    {
+      "chain": "Amorel",
+      "barcode": "7702129003650",
+      "price": 6100
+    },
+    {
+      "chain": "Amorel",
+      "barcode": "7702032120338",
+      "price": 8800
+    }
+  ]
+}
