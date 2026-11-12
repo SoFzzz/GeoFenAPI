@@ -1,0 +1,27 @@
+{
+  "categories": [
+    "Granos y arroz",
+    "Aceites",
+    "Azúcar y endulzantes",
+    "Lácteos",
+    "Huevos",
+    "Café",
+    "Harinas",
+    "Condimentos",
+    "Enlatados"
+  ],
+  "products": [
+    { "name": "Arroz Diana 1 Kg", "brand": "Diana", "barcode": "7702511000021", "category": "Granos y arroz" },
+    { "name": "Aceite Diana Girasol 900 ml", "brand": "Diana", "barcode": "7702028931313", "category": "Aceites" },
+    { "name": "Aceite Premier de Girasol 900 ml", "brand": "Premier", "barcode": "7701018076416", "category": "Aceites" },
+    { "name": "Azúcar Incauca Blanca 1 Kg", "brand": "Incauca", "barcode": "7702059402028", "category": "Azúcar y endulzantes" },
+    { "name": "Leche Colanta UHT Entera 1,1 L", "brand": "Colanta", "barcode": "7702129003650", "category": "Lácteos" },
+    { "name": "Huevo Nápoles Rojo AA x30", "brand": "Nápoles", "barcode": "7700624102038", "category": "Huevos" },
+    { "name": "Café Sello Rojo 110 g", "brand": "Sello Rojo", "barcode": "7702032120338", "category": "Café" },
+    { "name": "Café Sello Rojo 425 g", "brand": "Sello Rojo", "barcode": "7702032117833", "category": "Café" },
+    { "name": "Harina PAN Maíz Blanco 1 Kg", "brand": "Pan", "barcode": "7702084137520", "category": "Harinas" },
+    { "name": "Sal Refisal 1 Kg", "brand": "Refisal", "barcode": "7703812101202", "category": "Condimentos" },
+    { "name": "Atún Van Camp's Lomitos en Agua 160 g", "brand": "Van Camp's", "barcode": "7702367002620", "category": "Enlatados" },
+    { "name": "Panela Doña Panela Cubo Natural 300 g", "brand": "D'Panela", "barcode": "7707192730021", "category": "Azúcar y endulzantes" }
+  ]
+}
