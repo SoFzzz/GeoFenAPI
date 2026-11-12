@@ -135,8 +135,7 @@ export class StoresService {
   }
 
   /**
-   * Quita la columna generada location de la respuesta: TypeORM la recarga
-   * tras guardar y llegaría como un valor binario sin utilidad para el cliente.
+   * Quita la columna location de la respuesta (llega como binario).
    */
   private withoutLocation(store: Store): Store {
     delete store.location;

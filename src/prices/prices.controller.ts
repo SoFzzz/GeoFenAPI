@@ -59,7 +59,7 @@ export class PricesController {
 
   /**
    * GET /prices/latest?productId=
-   * Declarado antes de cualquier ruta con parámetro para evitar choques.
+   * Va antes de las rutas con parámetro.
    */
   @Get('latest')
   @ApiOperation({ summary: 'Precio más reciente de un producto en cada tienda' })
