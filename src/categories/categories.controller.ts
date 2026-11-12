@@ -9,13 +9,16 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiOperation,
   ApiParam,
   ApiResponse,
+  ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { ApiKeyGuard } from '../auth/api-key.guard';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -49,10 +52,13 @@ export class CategoriesController {
 
   /** POST /categories */
   @Post()
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear una categoría' })
   @ApiResponse({ status: 201, description: 'Categoría creada.' })
   @ApiResponse({ status: 400, description: 'Datos inválidos.' })
+  @ApiResponse({ status: 401, description: 'API key inválida o ausente.' })
   @ApiResponse({ status: 409, description: 'Categoría duplicada.' })
   async create(@Body() dto: CreateCategoryDto): Promise<Category> {
     return this.categoriesService.create(dto);
@@ -60,9 +66,12 @@ export class CategoriesController {
 
   /** PATCH /categories/:id */
   @Patch(':id')
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @ApiOperation({ summary: 'Actualizar parcialmente una categoría' })
   @ApiParam({ name: 'id', description: 'ID de la categoría', example: 1 })
   @ApiResponse({ status: 200, description: 'Categoría actualizada.' })
+  @ApiResponse({ status: 401, description: 'API key inválida o ausente.' })
   @ApiResponse({ status: 404, description: 'Categoría no encontrada.' })
   @ApiResponse({ status: 409, description: 'Nombre duplicado.' })
   async update(
@@ -74,9 +83,12 @@ export class CategoriesController {
 
   /** DELETE /categories/:id */
   @Delete(':id')
+  @UseGuards(ApiKeyGuard)
+  @ApiSecurity('api-key')
   @ApiOperation({ summary: 'Eliminar una categoría' })
   @ApiParam({ name: 'id', description: 'ID de la categoría', example: 1 })
   @ApiResponse({ status: 200, description: 'Categoría eliminada.' })
+  @ApiResponse({ status: 401, description: 'API key inválida o ausente.' })
   @ApiResponse({ status: 404, description: 'Categoría no encontrada.' })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
     return this.categoriesService.remove(id);
