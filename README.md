@@ -137,7 +137,8 @@ geofen-api/
 │   │   └── transformers/
 │   │       └── decimal.transformer.ts # Convierte decimales de PostgreSQL a number
 │   ├── database/
-│   │   ├── data-source.ts          # DataSource para la CLI de migraciones
+│   │   ├── data-source.ts          # DataSource para la CLI de migraciones y el seed
+│   │   ├── seeds/seed.ts           # Datos de ejemplo de Pasto (npm run seed)
 │   │   └── migrations/             # Migraciones TypeORM (esquema inicial y columna location)
 │   ├── app.module.ts               # Módulo raíz: submódulos, TypeORM y límite de peticiones
 │   └── main.ts                     # Bootstrap, ValidationPipe, filtro de errores y Swagger en /api
@@ -206,7 +207,8 @@ npm install @nestjs/typeorm typeorm pg @nestjs/config
    npm run start:dev
    ```
    - Con `DB_SYNCHRONIZE=true` en `.env`, TypeORM crea las tablas (`categories`, `products`, `prices`, `lists` y `stores`) al arrancar la API.
-   - La base arranca vacía. No hay tiendas precargadas, así que hay que crearlas con `POST /stores`.
+   - La base arranca vacía. Para cargar datos de ejemplo de Pasto (3 tiendas y 2 listas) ejecuta, opcionalmente y con la base ya levantada, `npm run seed`. Solo crea lo que no existe, así que puede repetirse sin duplicar datos.
+   - También puedes crear tiendas a mano con `POST /stores`.
 
 4. **Acceder a los servicios:**
    - **API Base:** `http://localhost:3000`
@@ -288,14 +290,14 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 | **Stores** | `DELETE` | `/stores/:id` | `remove(id)` | `200 OK` / `401` / `404` | Elimina una tienda por ID. Requiere `x-api-key` |
 | **Categories** | `GET` | `/categories` | `findAll()` | `200 OK` | Retorna todas las categorías |
 | **Categories** | `GET` | `/categories/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de una categoría por ID |
-| **Categories** | `POST` | `/categories` | `create(dto)` | `201 Created` / `400` / `409` | Crea una categoría (nombre único) |
-| **Categories** | `PATCH` | `/categories/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de categoría |
-| **Categories** | `DELETE` | `/categories/:id` | `remove(id)` | `200 OK` / `404` | Elimina una categoría por ID |
+| **Categories** | `POST` | `/categories` | `create(dto)` | `201 Created` / `400` / `401` / `409` | Crea una categoría (nombre único). Requiere `x-api-key` |
+| **Categories** | `PATCH` | `/categories/:id` | `update(id, dto)` | `200 OK` / `400` / `401` / `404` / `409` | Actualización parcial de categoría. Requiere `x-api-key` |
+| **Categories** | `DELETE` | `/categories/:id` | `remove(id)` | `200 OK` / `401` / `404` | Elimina una categoría por ID. Requiere `x-api-key` |
 | **Products** | `GET` | `/products` | `findAll(query)` | `200 OK` / `400` / `404` | Catálogo paginado (`page`, `limit`) con filtro opcional por `categoryId` |
 | **Products** | `GET` | `/products/:id` | `findOne(id)` | `200 OK` / `404` | Detalle de un producto por ID |
-| **Products** | `POST` | `/products` | `create(dto)` | `201 Created` / `400` / `404` / `409` | Registra un producto (barcode único, categoría opcional) |
-| **Products** | `PATCH` | `/products/:id` | `update(id, dto)` | `200 OK` / `400` / `404` / `409` | Actualización parcial de un producto |
-| **Products** | `DELETE` | `/products/:id` | `remove(id)` | `200 OK` / `404` | Elimina un producto por ID |
+| **Products** | `POST` | `/products` | `create(dto)` | `201 Created` / `400` / `401` / `404` / `409` | Registra un producto (barcode único, categoría opcional). Requiere `x-api-key` |
+| **Products** | `PATCH` | `/products/:id` | `update(id, dto)` | `200 OK` / `400` / `401` / `404` / `409` | Actualización parcial de un producto. Requiere `x-api-key` |
+| **Products** | `DELETE` | `/products/:id` | `remove(id)` | `200 OK` / `401` / `404` | Elimina un producto por ID. Requiere `x-api-key` |
 | **Prices** | `GET` | `/prices` | `findAll(productId?, storeId?)` | `200 OK` / `400` | Consulta precios con filtros opcionales por producto y tienda (enteros positivos) |
 | **Prices** | `GET` | `/prices/latest` | `findLatestByProduct(productId)` | `200 OK` / `400` / `404` | Precio más reciente del producto en cada tienda (`productId` obligatorio) |
 | **Prices** | `POST` | `/prices` | `reportPrice(dto)` | `201 Created` / `200 OK` / `400` / `401` / `404` | Reporta el precio de un producto en una tienda. `200` si ya existe el mismo producto, tienda y `scrapedAt`. Requiere `x-api-key` |
@@ -321,7 +323,7 @@ Todos los endpoints usan nombres en plural, sin verbos en las URLs, respetando l
 
 ### Autenticación del scraper (`x-api-key`)
 
-Los endpoints que escriben datos de tiendas y precios (`POST`, `PATCH` y `DELETE` de `/stores`, `POST /stores/bulk`, `POST /prices` y `POST /prices/bulk`) exigen el header `x-api-key`. Las lecturas (`GET`) son públicas.
+Los endpoints de escritura de tiendas, precios, categorías y productos (`POST`, `PATCH` y `DELETE` de `/stores`, `/categories` y `/products`, `POST /stores/bulk`, `POST /prices` y `POST /prices/bulk`) exigen el header `x-api-key`. Las lecturas (`GET`) son públicas.
 
 - La clave se define en `.env` con `SCRAPER_API_KEY` (el valor de `.env.example` es solo de ejemplo; cámbialo).
 - Sin header o con una clave distinta, la API responde `401 Unauthorized`. Si `SCRAPER_API_KEY` no está definida, ningún endpoint protegido acepta peticiones.
