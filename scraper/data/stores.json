@@ -1,0 +1,37 @@
+{
+  "city": "Pasto",
+  "stores": [
+    {
+      "name": "Éxito Panamericana",
+      "chain": "Éxito",
+      "address": "Av. Panamericana # 22-10, Pasto, Nariño",
+      "latitude": 1.2136,
+      "longitude": -77.2811,
+      "schedule": "Lunes a domingo 8:00 - 21:00"
+    },
+    {
+      "name": "Alkosto Centro",
+      "chain": "Alkosto",
+      "address": "Calle 19 # 20-56, Centro, Pasto, Nariño",
+      "latitude": 1.2142,
+      "longitude": -77.2795,
+      "schedule": "Lunes a domingo 8:00 - 21:00"
+    },
+    {
+      "name": "Supermercado Amorel",
+      "chain": "Amorel",
+      "address": "Carrera 27 # 16-45, San Andrés, Pasto, Nariño",
+      "latitude": 1.2108,
+      "longitude": -77.2771,
+      "schedule": "Lunes a sábado 7:00 - 20:00"
+    },
+    {
+      "name": "Olímpica (tienda virtual)",
+      "chain": "Olímpica",
+      "address": "Tienda virtual - olimpica.com",
+      "latitude": 10.9685,
+      "longitude": -74.7813,
+      "schedule": "24 horas"
+    }
+  ]
+}
